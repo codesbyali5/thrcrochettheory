@@ -1,0 +1,5 @@
+Node.js
+Express backend 
+SQLite 
+ Frontend 
+ HTML, CSS, JavaScript
