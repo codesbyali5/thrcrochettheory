@@ -1,0 +1,42 @@
+{
+  "name": "the-crochet-theory",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.16.0 <25"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "dev": "node --watch --env-file-if-exists=.env server/index.js",
+    "db:seed": "node --env-file-if-exists=.env server/seed.js",
+    "admin:create": "node --env-file-if-exists=.env server/create-admin.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "test:ui": "node tests/browser.js",
+    "db:backup": "node --env-file-if-exists=.env server/backup.js",
+    "format:check": "prettier --check \"server/*.js\" \"server/*.json\" \"admin/*.js\" \"admin/*.css\" \"admin/index.html\" \"assets/app.js\" \"assets/store.css\" \"tests/*.js\" package.json",
+    "test:dashboard": "node tests/dashboard-ui.js",
+    "test:customer": "node tests/customer-ui.js",
+    "test:payment": "node tests/payment-ui.js",
+    "repair": "node scripts/repair-dependencies.js"
+  },
+  "dependencies": {
+    "@sfpy/node-core": "^0.3.5",
+    "axios": "^1.20.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "multer": "^2.0.2",
+    "nodemailer": "^10.0.9",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.35.4",
+    "stripe": "^18.5.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.55.0",
+    "prettier": "^3.6.2",
+    "remixicon": "^4.9.0",
+    "supertest": "^7.1.4"
+  }
+}

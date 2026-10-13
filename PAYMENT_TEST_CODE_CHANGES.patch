@@ -1,0 +1,751 @@
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/.env /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/.env
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/.env	2026-09-14 11:14:04.757463716 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/.env	2026-09-14 11:50:36.141785293 +0000
+@@ -9,6 +9,8 @@
+ STORE_CURRENCY=pkr
+ 
+ PAYMENT_PROVIDER=payoneer
++# Development-only: simulates a successful international card payment without charging a real card.
++PAYMENT_TEST_MODE=true
+ PAYONEER_API_BASE=https://api.sandbox.payoneer.com/v4
+ PAYONEER_ACCOUNT_ID=
+ PAYONEER_ACCESS_TOKEN=
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/.env.example /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/.env.example
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/.env.example	2026-09-14 11:14:04.756371896 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/.env.example	2026-09-14 11:50:36.141939794 +0000
+@@ -13,6 +13,8 @@
+ 
+ # Payoneer-hosted payment request flow. Requires approved Payoneer API access.
+ PAYMENT_PROVIDER=payoneer
++# Development-only: simulates a successful international card payment without charging a real card.
++PAYMENT_TEST_MODE=true
+ PAYONEER_API_BASE=https://api.sandbox.payoneer.com/v4
+ PAYONEER_ACCOUNT_ID=
+ PAYONEER_ACCESS_TOKEN=
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/CHANGES_AND_SETUP.md /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/CHANGES_AND_SETUP.md
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/CHANGES_AND_SETUP.md	2026-09-14 11:25:13.412668771 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/CHANGES_AND_SETUP.md	2026-09-14 11:55:21.371669760 +0000
+@@ -1,3 +1,14 @@
++# Latest payment-test update — 2026-09-14
++
++- Added the complete **International Card Payment** test form: Cardholder Name, Card Number, Expiry Date, CVV, Phone with country code, full Country list, Province/State, City and ZIP Code.
++- Added `PAYMENT_TEST_MODE=true` for development testing. A valid-format test submission completes the order and unlocks the purchased digital PDF without contacting or charging a real card.
++- Raw card number, expiry and CVV never leave the browser in test mode; only brand + last four digits are sent as non-sensitive test metadata.
++- Added `server/test-card.js`. The server refuses raw PAN/CVV and disables simulated success whenever `NODE_ENV=production`.
++- Real mode remains provider-controlled: set `PAYMENT_TEST_MODE=false` and use only an approved Payoneer integration.
++- Automated Node suite after this update: **40 passed, 0 failed** using the same temporary Linux Sharp test shim described below.
++
++---
++
+ # THE CROCHET THEORY — Updated Build
+ 
+ Updated: 14 September 2026
+@@ -119,7 +130,7 @@
+ ## Final verification performed
+ 
+ - JavaScript syntax checks passed for the changed server, admin, dashboard, storefront, and test files.
+-- Full Node test suite: **38 passed, 0 failed**.
++- Full Node test suite after the original update: **38 passed, 0 failed**. The latest payment-test update adds two tests; the current suite is **40 passed, 0 failed**.
+ - Payoneer tests confirm raw card fields are rejected by the application server and that only a verified provider payment grants the purchased digital entitlement.
+ - Secret scan confirmed the previously exposed card/app-password/admin-password strings are not present in deliverable source files.
+ 
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/PAYMENT_SETUP.md /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/PAYMENT_SETUP.md
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/PAYMENT_SETUP.md	2026-09-14 11:47:29.766948400 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/PAYMENT_SETUP.md	2026-09-14 11:55:20.594636568 +0000
+@@ -1,64 +1,74 @@
+-# Payoneer payment setup — THE CROCHET THEORY
++# International card payment setup — THE CROCHET THEORY
+ 
+-This build is prepared for a **Payoneer-hosted payment-request flow** for digital pattern orders. The storefront collects only the non-sensitive payer details needed to prepare the order: cardholder name, phone with country code, country, province/state, city and ZIP/postal code. **Card number, expiry and CVV are never posted to this website or stored in SQLite.** Those sensitive fields are completed on the payment provider's secure page.
++This build has **two payment modes** so the complete digital-product purchase flow can be tested safely now and switched to an approved Payoneer flow later.
+ 
+-## Important eligibility note
++## 1) Development test mode — included and enabled
+ 
+-Payoneer products are account- and jurisdiction-dependent. Payoneer's public Checkout page says Checkout is subject to eligibility and currently describes specific entity/volume requirements for its Checkout service. The Billing Services / Payment Request API is also an enabled service, not something a website can activate just by adding a card number or a Payoneer email. You must obtain approved API access from Payoneer for your account before this integration can process real payments.
+-
+-## Environment variables
+-
+-Copy `.env.example` to `.env` and set:
++The included `.env` contains:
+ 
+ ```env
+ NODE_ENV=development
+-PORT=5500
+-APP_URL=http://localhost:5500
+-STORE_CURRENCY=pkr
++PAYMENT_PROVIDER=payoneer
++PAYMENT_TEST_MODE=true
++```
++
++In this mode the checkout shows the complete requested form:
++
++- International Card Payment
++- Cardholder Name
++- Card Number
++- Expiry Date
++- CVV
++- Phone Number with country code
++- Country — full world-country list
++- Province / State
++- City
++- ZIP Code
++
++The browser performs basic card-format, Luhn, expiry and CVV validation. **No real payment is processed.** After a valid test submission, the server creates the real order from database prices, marks that order as a test-paid order, grants only the purchased digital pattern entitlement and opens the normal success/download page.
++
++### Important test-mode security behavior
+ 
++Raw card number, expiry and CVV are **not sent to the Node server, not stored in SQLite, not logged and not saved in localStorage**. Before the request is sent, the browser discards those values and sends only the card brand and last four digits as a non-sensitive test receipt reference.
++
++Use test data only. Do not enter a real card while `PAYMENT_TEST_MODE=true` because no provider is being contacted and no money will move.
++
++The backend also blocks test-card checkout automatically when `NODE_ENV=production`, so the test success shortcut cannot be used as the production payment system.
++
++## 2) Real Payoneer mode — enable after provider approval
++
++To disable the simulated success flow:
++
++```env
++PAYMENT_TEST_MODE=false
+ PAYMENT_PROVIDER=payoneer
+-PAYONEER_API_BASE=https://api.sandbox.payoneer.com/v4
+-PAYONEER_ACCOUNT_ID=YOUR_APPROVED_ACCOUNT_ID
+-PAYONEER_ACCESS_TOKEN=YOUR_SERVER_SIDE_ACCESS_TOKEN
+-PAYOUT_MODE=request
+ ```
+ 
+-Do not expose the Payoneer access token in browser JavaScript, HTML, GitHub, screenshots or client-side environment variables.
++Then add only credentials/endpoints officially issued for your approved Payoneer integration. Never invent API credentials or place merchant access tokens in browser JavaScript.
+ 
+-## How payment confirmation works
++Current real-mode fallback in this project is provider-hosted Payoneer collection: sensitive card details stay with the payment provider and the website waits for provider confirmation before unlocking downloads.
+ 
+-1. The customer signs in, adds digital patterns and opens **International Card Payment**.
+-2. The store creates a server-side order from database prices and sends a Payoneer payment-request request.
+-3. The customer is redirected to the provider URL. Card details stay on the provider side.
+-4. `success.html?order=...` polls the order endpoint. For Payoneer orders, the server re-checks the payment request and validates the order reference, amount and currency.
+-5. When Payoneer returns a payment ID plus a paid timestamp/status indicating the payment is on its way/completed, the server atomically marks the order paid and grants only the purchased pattern files.
+-6. The admin order screen also has **Sync Payoneer status**. A password-protected **Confirm verified payment** fallback exists only for cases where API status is unavailable; use it only after matching the payment in your Payoneer dashboard.
++If your approved Payoneer Checkout account provides an **embedded secure checkout** integration, its provider-controlled card fields can be mounted into the same visual form. Do not replace them with ordinary HTML card inputs that post PAN/CVV to this server.
+ 
+-## Withdrawals
++## Real payment expectations
+ 
+-Money received through an eligible Payoneer service is managed in Payoneer. This application does **not** ask for or store your Payoneer card details and does not fake a withdrawal API. `PAYOUT_MODE=request` records internal payout notes only; complete real withdrawals in the Payoneer dashboard to your supported bank account.
++Payoneer's public Checkout information says its online checkout can accept major cards and can settle checkout revenue into the Payoneer account, but payment methods and Checkout availability depend on account, market and integration eligibility. A test success in this project does **not** mean a real card was charged or that Payoneer has approved your store.
+ 
+-## Digital-product checkout fields
++## Digital products
+ 
+-The website intentionally does not ask for a shipping/street address. The checkout UI contains:
++There is no shipping/street-address section. The payment form asks only for card/billing contact fields needed for the requested international-card flow. A successful order unlocks the purchased PDF in the user's library and on the success page.
+ 
+-- International Card Payment
+-- Cardholder Name
+-- Card Number — entered on Payoneer's secure page
+-- Expiry Date — entered on Payoneer's secure page
+-- CVV — entered on Payoneer's secure page
+-- Phone Number with country code
+-- Country (full country list)
+-- Province / State
+-- City
+-- ZIP / Postal code
++## Run locally
+ 
+-## Before live launch
++```bash
++npm install
++npm run dev
++```
+ 
+-Use only Payoneer credentials issued for your approved integration. Confirm that your Payoneer account supports the store currency you configured. Run a sandbox purchase, verify the provider status updates the order to `paid`, verify only the purchased PDF unlocks, test a cancelled/failed payment, test duplicate status checks, and confirm your production HTTPS origin before accepting real money.
++Open:
+ 
+-Official references used while implementing this build:
++```text
++http://localhost:5500
++```
+ 
+-- Payoneer Checkout: https://www.payoneer.com/checkout/
+-- Payoneer Billing Services / Payment Requests: https://www.payoneer.com/developers-docs/accounts-receivable/ar-billing-services/
+-- Payoneer developer/API access is subject to account eligibility and onboarding.
++Do not use VS Code Live Server for this full application because authentication, SQLite, uploads, protected downloads and checkout are Node server features.
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/PAYMENT_TEST_MODE.md /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/PAYMENT_TEST_MODE.md
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/PAYMENT_TEST_MODE.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/PAYMENT_TEST_MODE.md	2026-09-14 11:55:20.598636395 +0000
+@@ -0,0 +1,36 @@
++# Payment test mode — quick reference
++
++## Enabled now
++
++```env
++NODE_ENV=development
++PAYMENT_TEST_MODE=true
++PAYMENT_PROVIDER=payoneer
++```
++
++Test checkout accepts the complete card/billing UI and then simulates a successful payment. It does not contact Payoneer and does not charge a card.
++
++## Card data handling
++
++`assets/app.js` validates card number, expiry and CVV in the browser. Before calling `/api/checkout`, it removes those sensitive values and sends only:
++
++```json
++{
++  "card": {
++    "brand": "visa",
++    "last4": "4242"
++  }
++}
++```
++
++`server/test-card.js` rejects a request if raw `cardNumber`, `cvv`, `cvc`, `expiry` or `expiryDate` fields are sent to it.
++
++## Real mode later
++
++```env
++NODE_ENV=production
++PAYMENT_TEST_MODE=false
++PAYMENT_PROVIDER=payoneer
++```
++
++Production also requires an HTTPS `APP_URL` and approved provider configuration. The simulated payment path is unavailable in production even if someone accidentally leaves `PAYMENT_TEST_MODE=true`.
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/README.md /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/README.md
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/README.md	2026-09-14 11:47:29.766948400 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/README.md	2026-09-14 11:55:21.526596411 +0000
+@@ -189,3 +189,15 @@
+ For Gmail SMTP, set SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_SECURE=false, SMTP_USER to the sending Gmail address, SMTP_PASSWORD to its Google app password, and MAIL_FROM to that sender in the private .env file. APP_URL must be the public HTTPS store URL so email links work for customers. Keep credentials out of .env.example. Restart the Node server after changing configuration.
+ 
+ Run node --env-file=.env tests/mail-check.js to verify the SMTP connection without sending email. Run npm test for API tests and npm run test:customer for signup, verification, user management and review browser checks.
++
++## Development card-payment test mode
++
++For local end-to-end testing, `.env` currently enables:
++
++```env
++PAYMENT_TEST_MODE=true
++```
++
++The checkout displays Cardholder Name, Card Number, Expiry, CVV, phone, country, state, city and ZIP. A valid-format test submission is marked successful and unlocks the purchased PDF, but **no real card is charged and no money is sent to Payoneer**. Raw PAN/expiry/CVV are discarded in the browser and are not posted to the server.
++
++Before a real launch, set `PAYMENT_TEST_MODE=false`, use `NODE_ENV=production`, configure HTTPS, and connect only an approved Payoneer payment integration. See `PAYMENT_SETUP.md` and `PAYMENT_TEST_MODE.md`.
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/assets/app.js /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/assets/app.js
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/assets/app.js	2026-09-14 11:20:16.844654897 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/assets/app.js	2026-09-14 11:50:12.627212643 +0000
+@@ -28,6 +28,8 @@
+     user: null,
+     csrf: "",
+     currency: "usd",
++    paymentProvider: "payoneer",
++    paymentTestMode: false,
+     reviews: [],
+     account: null,
+   },
+@@ -46,6 +48,56 @@
+     currency: state.currency.toUpperCase(),
+     minimumFractionDigits: 2,
+   }).format(Number(n || 0));
++
++function compactCardNumber(value) {
++  return String(value || "").replace(/\D/g, "").slice(0, 19);
++}
++function cardBrand(number) {
++  const n = compactCardNumber(number);
++  if (/^4/.test(n)) return "visa";
++  if (/^(5[1-5]|2(?:2[2-9]|[3-6]\d|7[01]|720))/.test(n)) return "mastercard";
++  if (/^3[47]/.test(n)) return "amex";
++  if (/^(6011|65|64[4-9])/.test(n)) return "discover";
++  if (/^3(?:0[0-5]|[68])/.test(n)) return "diners";
++  if (/^35/.test(n)) return "jcb";
++  if (/^62/.test(n)) return "unionpay";
++  return "card";
++}
++function luhnValid(number) {
++  const digits = compactCardNumber(number);
++  if (digits.length < 13 || digits.length > 19) return false;
++  let sum = 0;
++  let doubleDigit = false;
++  for (let i = digits.length - 1; i >= 0; i--) {
++    let d = Number(digits[i]);
++    if (doubleDigit) {
++      d *= 2;
++      if (d > 9) d -= 9;
++    }
++    sum += d;
++    doubleDigit = !doubleDigit;
++  }
++  return sum % 10 === 0;
++}
++function validExpiry(value) {
++  const match = String(value || "").trim().match(/^(0[1-9]|1[0-2])\s*\/\s*(\d{2})$/);
++  if (!match) return false;
++  const month = Number(match[1]);
++  const year = 2000 + Number(match[2]);
++  const nowDate = new Date();
++  return year > nowDate.getFullYear() ||
++    (year === nowDate.getFullYear() && month >= nowDate.getMonth() + 1);
++}
++function testCardSummary(values) {
++  const number = compactCardNumber(values.cardNumber);
++  if (!luhnValid(number))
++    throw new Error("Enter a valid test card number (13–19 digits). No real card will be charged in test mode.");
++  if (!validExpiry(values.expiry))
++    throw new Error("Enter a valid future expiry date in MM/YY format.");
++  if (!/^\d{3,4}$/.test(String(values.cvv || "").trim()))
++    throw new Error("Enter a 3 or 4 digit CVV.");
++  return { brand: cardBrand(number), last4: number.slice(-4) };
++}
+ function toast(msg) {
+   const el = q("#toast");
+   if (!el) return;
+@@ -386,7 +438,35 @@
+           0,
+         ),
+       );
+-    panel.innerHTML = `<div class="payment-panel-heading"><span class="payment-icon"><i class="ri-bank-card-line" aria-hidden="true"></i></span><div><div class="eyebrow">Secure checkout</div><h2 id="checkoutTitle">International Card Payment</h2></div></div><p class="payment-intro">Your store sends the order to Payoneer. For security, card number, expiry and CVV are entered on Payoneer’s secure payment page — this website never receives or stores them.</p><form id="billingForm"><div class="payment-grid"><div class="field payment-full"><label for="billingName">Cardholder Name</label><input id="billingName" class="input" name="name" autocomplete="cc-name" maxlength="160" value="${esc(state.user.firstName + " " + state.user.lastName)}" required></div><div class="field payment-full secure-card-field"><label>Card Number</label><div class="secure-card-placeholder"><i class="ri-lock-line" aria-hidden="true"></i><span>Entered securely on Payoneer</span></div></div><div class="field"><label>Expiry Date</label><div class="secure-card-placeholder compact">MM / YY · Payoneer secure page</div></div><div class="field"><label>CVV</label><div class="secure-card-placeholder compact">3 or 4 digits · Payoneer secure page</div></div><div class="field"><label for="billingPhone">Phone Number with country code</label><input id="billingPhone" class="input" name="phone" type="tel" autocomplete="tel" maxlength="30" placeholder="+92 300 1234567" aria-describedby="phoneHint" required><small id="phoneHint" class="helper">Include + and your country calling code.</small></div><div class="field"><label for="billingCountry">Country</label><select id="billingCountry" class="input" name="country" autocomplete="country" required><option value="">Select country</option>${countries.map((c) => `<option value="${c.code}">${esc(c.name)}</option>`).join("")}</select></div><div class="field"><label for="billingState">Province / State</label><input id="billingState" class="input" name="state" autocomplete="address-level1" maxlength="100" required></div><div class="field"><label for="billingCity">City</label><input id="billingCity" class="input" name="city" autocomplete="address-level2" maxlength="100" required></div><div class="field"><label for="billingPostal">Zip Code</label><input id="billingPostal" class="input" name="postalCode" autocomplete="postal-code" maxlength="20" required></div></div><div class="payment-total"><span>Total due</span><strong id="paymentTotal">${esc(paymentTotal)}</strong></div><div class="payment-actions"><button id="payButton" class="btn btn-dark" type="submit"><i class="ri-lock-line" aria-hidden="true"></i> Continue with Payoneer</button><button id="cancelCheckout" class="btn btn-light" type="button">Back to basket</button></div><p class="helper">Digital order only — no shipping address is requested. Your purchased PDFs unlock after the store receives confirmed payment status.</p><div id="paymentNotice" class="notice" role="status" aria-live="polite"></div></form>`;
++
++    const cardFields = state.paymentTestMode
++      ? `<div class="field payment-full"><label for="billingCardNumber">Card Number</label><div class="card-input-wrap"><i class="ri-bank-card-line" aria-hidden="true"></i><input id="billingCardNumber" class="input" name="cardNumber" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="1234 5678 9012 3456" required></div><small id="cardBrandHint" class="helper">Test mode: use test data only. Card details never leave this browser.</small></div><div class="field"><label for="billingExpiry">Expiry Date</label><input id="billingExpiry" class="input" name="expiry" inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="MM/YY" required></div><div class="field"><label for="billingCvv">CVV</label><input id="billingCvv" class="input" name="cvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="3 or 4 digits" required></div>`
++      : `<div class="field payment-full secure-card-field"><label>Card Number</label><div class="secure-card-placeholder"><i class="ri-lock-line" aria-hidden="true"></i><span>Entered securely on Payoneer Checkout</span></div></div><div class="field"><label>Expiry Date</label><div class="secure-card-placeholder compact">MM / YY · Payoneer secure page</div></div><div class="field"><label>CVV</label><div class="secure-card-placeholder compact">3 or 4 digits · Payoneer secure page</div></div>`;
++    const intro = state.paymentTestMode
++      ? `<div class="test-payment-banner"><strong>TEST PAYMENT MODE</strong><span>No real card is charged and no money is sent to Payoneer. Successful test checkout unlocks the purchased file so you can test the full flow.</span></div>`
++      : `<p class="payment-intro">International card payment is processed by Payoneer Checkout. Card number, expiry and CVV must be handled by Payoneer’s secure hosted/embedded payment fields so this store never stores raw card data.</p>`;
++
++    panel.innerHTML = `<div class="payment-panel-heading"><span class="payment-icon"><i class="ri-bank-card-line" aria-hidden="true"></i></span><div><div class="eyebrow">Secure checkout</div><h2 id="checkoutTitle">International Card Payment</h2></div></div>${intro}<form id="billingForm" autocomplete="on"><div class="payment-grid"><div class="field payment-full"><label for="billingName">Cardholder Name</label><input id="billingName" class="input" name="name" autocomplete="cc-name" maxlength="160" value="${esc(state.user.firstName + " " + state.user.lastName)}" required></div>${cardFields}<div class="field"><label for="billingPhone">Phone Number with country code</label><input id="billingPhone" class="input" name="phone" type="tel" autocomplete="tel" maxlength="30" placeholder="+92 300 1234567" aria-describedby="phoneHint" required><small id="phoneHint" class="helper">Include + and your country calling code.</small></div><div class="field"><label for="billingCountry">Country</label><select id="billingCountry" class="input" name="country" autocomplete="country" required><option value="">Select country</option>${countries.map((c) => `<option value="${c.code}">${esc(c.name)}</option>`).join("")}</select></div><div class="field"><label for="billingState">Province / State</label><input id="billingState" class="input" name="state" autocomplete="address-level1" maxlength="100" required></div><div class="field"><label for="billingCity">City</label><input id="billingCity" class="input" name="city" autocomplete="address-level2" maxlength="100" required></div><div class="field"><label for="billingPostal">Zip Code</label><input id="billingPostal" class="input" name="postalCode" autocomplete="postal-code" maxlength="20" required></div></div><div class="payment-total"><span>Total due</span><strong id="paymentTotal">${esc(paymentTotal)}</strong></div><div class="payment-actions"><button id="payButton" class="btn btn-dark" type="submit"><i class="ri-lock-line" aria-hidden="true"></i> ${state.paymentTestMode ? "Complete test payment" : "Continue with Payoneer"}</button><button id="cancelCheckout" class="btn btn-light" type="button">Back to basket</button></div><p class="helper">Digital order only — no shipping address is requested. ${state.paymentTestMode ? "Test checkout marks this order successful without charging a real card." : "Purchased PDFs unlock only after Payoneer confirms the payment."}</p><div id="paymentNotice" class="notice" role="status" aria-live="polite"></div></form>`;
++
++    if (state.paymentTestMode) {
++      const cardInput = q("#billingCardNumber");
++      const expiryInput = q("#billingExpiry");
++      const cvvInput = q("#billingCvv");
++      cardInput.addEventListener("input", () => {
++        const digits = compactCardNumber(cardInput.value);
++        cardInput.value = digits.replace(/(.{4})/g, "$1 ").trim();
++        const brand = cardBrand(digits);
++        q("#cardBrandHint").textContent = `${brand === "card" ? "Card" : brand[0].toUpperCase() + brand.slice(1)} detected · test mode only · card details are not sent to the store server.`;
++      });
++      expiryInput.addEventListener("input", () => {
++        const digits = expiryInput.value.replace(/\D/g, "").slice(0, 4);
++        expiryInput.value = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
++      });
++      cvvInput.addEventListener("input", () => {
++        cvvInput.value = cvvInput.value.replace(/\D/g, "").slice(0, 4);
++      });
++    }
++
+     q("#cancelCheckout").addEventListener("click", () => {
+       panel.remove();
+       button.focus();
+@@ -395,13 +475,23 @@
+       e.preventDefault();
+       submit(
+         e.target,
+-        async (billing) => {
+-          billing.phone = billing.phone.replace(/[\s().-]/g, "");
+-          if (!/^\+[1-9][0-9]{6,14}$/.test(billing.phone))
++        async (values) => {
++          values.phone = values.phone.replace(/[\s().-]/g, "");
++          if (!/^\+[1-9][0-9]{6,14}$/.test(values.phone))
+             throw new Error(
+               "Enter a phone number with country code, for example +92 300 1234567.",
+             );
+-          await payCheckout(billing);
++          const billing = {
++            name: values.name,
++            phone: values.phone,
++            country: values.country,
++            state: values.state,
++            city: values.city,
++            postalCode: values.postalCode,
++          };
++          const card = state.paymentTestMode ? testCardSummary(values) : null;
++          // Raw card number, expiry and CVV are deliberately discarded here.
++          await payCheckout(billing, card);
+         },
+         q("#paymentNotice"),
+       );
+@@ -414,13 +504,15 @@
+     button.disabled = false;
+   }
+ }
+-async function payCheckout(billing) {
++async function payCheckout(billing, card = null) {
+   if (!state.user) {
+     location.href = "login.html?next=cart.html";
+     return;
+   }
+-  const btn = q("#checkoutButton");
+-  const paymentWindow = window.open("about:blank", "tct_payoneer_payment");
++  const btn = q("#payButton") || q("#checkoutButton");
++  const paymentWindow = state.paymentTestMode
++    ? null
++    : window.open("about:blank", "tct_payoneer_payment");
+   if (paymentWindow) {
+     try {
+       paymentWindow.opener = null;
+@@ -428,19 +520,29 @@
+     } catch {}
+   }
+   btn.disabled = true;
+-  showNotice(q("#checkoutNotice"), "Preparing payment…");
++  showNotice(
++    q("#paymentNotice") || q("#checkoutNotice"),
++    state.paymentTestMode ? "Completing test payment…" : "Preparing secure payment…",
++  );
+   try {
+     checkoutId ||= crypto.randomUUID();
++    const payload = {
++      payment_method: "credit_card",
++      billing,
++      product_ids: cart(),
++      code: q("#couponCode")?.value || "",
++      request_id: checkoutId,
++    };
++    if (state.paymentTestMode) payload.card = card;
+     const r = await api("/checkout", {
+       method: "POST",
+-      body: JSON.stringify({
+-        payment_method: "credit_card",
+-        billing,
+-        product_ids: cart(),
+-        code: q("#couponCode")?.value || "",
+-        request_id: checkoutId,
+-      }),
++      body: JSON.stringify(payload),
+     });
++    if (r.test && r.status === "paid") {
++      checkoutId = null;
++      location.assign(`success.html?order=${encodeURIComponent(r.order_id)}&test=1`);
++      return;
++    }
+     if (r.manual) {
+       throw new Error(
+         "Card payments are temporarily unavailable. Please contact the store for help.",
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/assets/store.css /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/assets/store.css
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/assets/store.css	2026-09-14 11:09:00.334670210 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/assets/store.css	2026-09-14 11:50:27.347273718 +0000
+@@ -756,3 +756,37 @@
+     padding: 22px;
+   }
+ }
++
++/* Test card checkout: real-looking UI without transmitting raw card data. */
++.test-payment-banner {
++  display: grid;
++  gap: 5px;
++  margin: 20px 0 24px;
++  padding: 14px 16px;
++  border: 1px solid #d8c5a8;
++  border-radius: 12px;
++  background: #fff7e8;
++  color: #5e4931;
++  font-size: 13px;
++  line-height: 1.5;
++}
++.test-payment-banner strong {
++  font-size: 11px;
++  letter-spacing: .12em;
++}
++.card-input-wrap {
++  position: relative;
++}
++.card-input-wrap > i {
++  position: absolute;
++  top: 50%;
++  left: 13px;
++  transform: translateY(-50%);
++  color: var(--muted);
++  font-size: 18px;
++  pointer-events: none;
++}
++.card-input-wrap .input {
++  padding-left: 42px;
++  letter-spacing: .04em;
++}
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/server/app.js /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/server/app.js
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/server/app.js	2026-09-14 11:13:40.951749107 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/server/app.js	2026-09-14 11:49:23.720412807 +0000
+@@ -44,6 +44,7 @@
+   processSafepayWebhook,
+ } from "./safepay.js";
+ import { createPayoneerCheckout, syncPayoneerOrder } from "./payoneer.js";
++import { createTestCardCheckout } from "./test-card.js";
+ export const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
+ export function productView(db, p, admin = false) {
+   const rating = get(
+@@ -104,6 +105,7 @@
+     payoneerApiBase: process.env.PAYONEER_API_BASE || "https://api.sandbox.payoneer.com/v4",
+     payoneerAccountId: process.env.PAYONEER_ACCOUNT_ID || "",
+     payoneerAccessToken: process.env.PAYONEER_ACCESS_TOKEN || "",
++    paymentTestMode: process.env.PAYMENT_TEST_MODE === "true",
+     safepayEnvironment: process.env.SAFEPAY_ENVIRONMENT || "sandbox",
+     safepayApiKey: process.env.SAFEPAY_API_KEY || "",
+     safepaySecret: process.env.SAFEPAY_SECRET_KEY || "",
+@@ -262,7 +264,13 @@
+     const csrf =
+       req.session?.csrf ||
+       issueSession(db, res, null, config.production, req.sessionToken);
+-    res.json({ user: publicUser(req.user), csrf, currency: config.currency });
++    res.json({
++      user: publicUser(req.user),
++      csrf,
++      currency: config.currency,
++      paymentProvider: config.paymentProvider,
++      paymentTestMode: config.paymentTestMode && !config.production,
++    });
+   });
+   const authLimit = rateLimit({
+     windowMs: 900000,
+@@ -935,6 +943,8 @@
+     }),
+   );
+   app.post("/api/checkout", requireUser, async (req, res) => {
++    if (config.paymentTestMode && !config.production)
++      return res.json(await createTestCardCheckout(db, config, req.user, req.body));
+     if (config.paymentProvider === "payoneer")
+       return res.json(await createPayoneerCheckout(db, config, req.user, req.body));
+     if (config.paymentProvider === "safepay")
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/server/test-card.js /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/server/test-card.js
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/server/test-card.js	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/server/test-card.js	2026-09-14 11:49:16.264244063 +0000
+@@ -0,0 +1,92 @@
++import { z } from "zod";
++import { all, get, now, run, transaction } from "./db.js";
++import { reserveOrder } from "./payments.js";
++import { audit, id } from "./security.js";
++import { fail } from "./validation.js";
++
++const billingSchema = z
++  .object({
++    name: z.string().trim().min(2).max(160),
++    phone: z
++      .string()
++      .trim()
++      .regex(/^\+[1-9][0-9]{6,14}$/, "Use a phone number with country code."),
++    country: z.string().trim().min(2).max(3),
++    state: z.string().trim().min(1).max(100),
++    city: z.string().trim().min(1).max(100),
++    postalCode: z.string().trim().min(1).max(20),
++  })
++  .strict();
++
++const cardSummarySchema = z
++  .object({
++    brand: z.enum(["visa", "mastercard", "amex", "discover", "diners", "jcb", "unionpay", "card"]),
++    last4: z.string().regex(/^\d{4}$/),
++  })
++  .strict();
++
++/**
++ * Local/staging-only simulated card checkout.
++ * IMPORTANT: raw PAN, expiry and CVV must never be sent to this endpoint.
++ * The browser validates test input, discards the sensitive values and sends
++ * only a non-sensitive brand + last four digits for the order receipt/audit log.
++ */
++export async function createTestCardCheckout(db, config, user, body) {
++  if (!config.paymentTestMode || config.production)
++    fail(404, "Test card checkout is not available.");
++
++  if (
++    body?.cardNumber ||
++    body?.card_number ||
++    body?.cvv ||
++    body?.cvc ||
++    body?.expiry ||
++    body?.expiryDate
++  )
++    fail(400, "Raw card details must never be sent to the store server.");
++
++  const billing = billingSchema.parse(body.billing || {});
++  const card = cardSummarySchema.parse(body.card || {});
++  const order = reserveOrder(db, { ...config, checkoutMinutes: 30 }, user, body);
++
++  transaction(db, () => {
++    const current = get(db, "SELECT * FROM orders WHERE id=?", order.id);
++    if (current.paid_at) return;
++
++    const paymentId = `testcard:${card.brand}:${card.last4}:${id()}`.slice(0, 255);
++    run(
++      db,
++      "UPDATE orders SET status='paid',payment_intent=?,paid_at=?,reserved_until=NULL WHERE id=?",
++      paymentId,
++      now(),
++      order.id,
++    );
++
++    for (const item of all(db, "SELECT product_id FROM order_items WHERE order_id=?", order.id))
++      run(
++        db,
++        "INSERT OR IGNORE INTO entitlements VALUES(?,?,?,?,?)",
++        order.user_id,
++        item.product_id,
++        order.id,
++        null,
++        now(),
++      );
++
++    audit(db, user.id, "payment.test_success", order.id, {
++      provider: "test-card",
++      brand: card.brand,
++      last4: card.last4,
++      country: billing.country,
++      city: billing.city,
++    });
++  });
++
++  return {
++    test: true,
++    provider: "test-card",
++    order_id: order.id,
++    status: "paid",
++    message: "Test payment completed. No real card was charged.",
++  };
++}
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/tests/store.test.js /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/tests/store.test.js
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/tests/store.test.js	2026-09-14 11:02:35.108797842 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/tests/store.test.js	2026-09-14 11:53:05.977150686 +0000
+@@ -975,7 +975,11 @@
+   const js = readFileSync("assets/app.js", "utf8");
+   assert.doesNotMatch(
+     js,
+-    /adminCreds|cardNumber|passwordHash|generatePatternText|demoCard/,
++    /adminCreds|passwordHash|generatePatternText|demoCard/,
++  );
++  assert.doesNotMatch(
++    js,
++    /(?:^|[^0-9])(?:4[0-9]{15}|5[1-5][0-9]{14}|3[47][0-9]{13})(?:[^0-9]|$)/,
+   );
+   assert.doesNotMatch(
+     readFileSync("admin/index.html", "utf8"),
+diff -ruN '--exclude=node_modules' '--exclude=test-results' '--exclude=.npm-cache' '--exclude=data' '--exclude=CODE_CHANGES.patch' '--exclude=PAYMENT_TEST_CODE_CHANGES.patch' /mnt/data/THE_CROCHET_THEORY_UPDATED/tests/test-card.test.js /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/tests/test-card.test.js
+--- /mnt/data/THE_CROCHET_THEORY_UPDATED/tests/test-card.test.js	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/THE_CROCHET_THEORY_PAYMENT_TEST_UPDATED/tests/test-card.test.js	2026-09-14 11:51:04.567699523 +0000
+@@ -0,0 +1,129 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { randomUUID } from "node:crypto";
++import { openDatabase, run, get, now } from "../server/db.js";
++import { createTestCardCheckout } from "../server/test-card.js";
++
++function fixture() {
++  const db = openDatabase(":memory:");
++  const user = { id: randomUUID(), email: "maker@example.test" };
++  run(
++    db,
++    "INSERT INTO users(id,email,password_hash,first_name,last_name,role,status,created_at) VALUES(?,?,?,?,?,?,?,?)",
++    user.id,
++    user.email,
++    "hash",
++    "Maker",
++    "Test",
++    "customer",
++    "active",
++    now(),
++  );
++  const fileId = randomUUID();
++  run(db, "INSERT INTO files VALUES(?,?,?,?,?,?)", fileId, "pdf", `${fileId}.pdf`, "pattern.pdf", 100, now());
++  const productId = randomUUID();
++  run(
++    db,
++    `INSERT INTO products(
++      id,name,price,cat,level,description,img,images,hook,yarn,time,details,tags,status,
++      featured,badge,file_id,seo_title,seo_description,created_at,updated_at,video
++    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
++    productId,
++    "Test Pattern",
++    1250,
++    "Clothing",
++    "Beginner",
++    "A test digital pattern",
++    "assets/images/pattern-1.svg",
++    "[]",
++    "",
++    "",
++    "",
++    "",
++    "[]",
++    "active",
++    0,
++    "",
++    fileId,
++    "",
++    "",
++    now(),
++    now(),
++    "",
++  );
++  return { db, user, productId };
++}
++
++const config = {
++  currency: "pkr",
++  checkoutMinutes: 30,
++  paymentTestMode: true,
++  production: false,
++};
++
++const billing = {
++  name: "Maker Test",
++  phone: "+923001234567",
++  country: "PK",
++  state: "Punjab",
++  city: "Faisalabad",
++  postalCode: "38000",
++};
++
++test("test card checkout marks order paid and grants only the purchased entitlement", async () => {
++  const f = fixture();
++  try {
++    const orderId = randomUUID();
++    const result = await createTestCardCheckout(f.db, config, f.user, {
++      request_id: orderId,
++      product_ids: [f.productId],
++      code: "",
++      billing,
++      card: { brand: "visa", last4: "4242" },
++    });
++    assert.equal(result.test, true);
++    assert.equal(result.status, "paid");
++    const order = get(f.db, "SELECT status,payment_intent,paid_at FROM orders WHERE id=?", orderId);
++    assert.equal(order.status, "paid");
++    assert.match(order.payment_intent, /^testcard:visa:4242:/);
++    assert.ok(order.paid_at);
++    assert.equal(
++      get(
++        f.db,
++        "SELECT COUNT(*) n FROM entitlements WHERE user_id=? AND product_id=? AND revoked_at IS NULL",
++        f.user.id,
++        f.productId,
++      ).n,
++      1,
++    );
++  } finally {
++    f.db.close();
++  }
++});
++
++test("test card endpoint refuses raw PAN/CVV and is disabled in production", async () => {
++  const f = fixture();
++  try {
++    await assert.rejects(
++      createTestCardCheckout(f.db, config, f.user, {
++        request_id: randomUUID(),
++        product_ids: [f.productId],
++        billing,
++        card: { brand: "visa", last4: "4242" },
++        cardNumber: "4242424242424242",
++      }),
++      /Raw card details must never be sent/,
++    );
++    await assert.rejects(
++      createTestCardCheckout(f.db, { ...config, production: true }, f.user, {
++        request_id: randomUUID(),
++        product_ids: [f.productId],
++        billing,
++        card: { brand: "visa", last4: "4242" },
++      }),
++      /Test card checkout is not available/,
++    );
++  } finally {
++    f.db.close();
++  }
++});

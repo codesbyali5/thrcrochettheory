@@ -1,0 +1,20 @@
+PDF upload/API fix
+- server/uploads.js
+- server/pdf-worker.js
+- server/admin.js
+- admin/admin.js
+- admin/admin.css
+- tests/pdf-upload-regression.test.js
+
+Email verification frontend/email update
+- verify.html
+- assets/verify.js
+- assets/store.css
+- server/email-verification.js
+- tests/verification-ui-static.test.js
+- tests/customer-ui.js
+
+Documentation
+- PDF_EMAIL_FIX.md
+- CHANGES_AND_SETUP.md
+- README.md

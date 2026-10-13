@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Premium digital crochet patterns from THE CROCHET THEORY."
+    />
+    <title>THE CROCHET THEORY — Modern Crochet Patterns</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+    <link rel="stylesheet" href="assets/store.css" />
+  </head>
+  <body>
+    <div class="announcement">
+      Instant digital crochet patterns • Thoughtfully designed for modern makers
+    </div>
+    <header class="site-header">
+      <div class="container nav">
+        <a class="brand" href="index.html">THE CROCHET THEORY</a>
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="index.html">Home</a>
+          <div class="dropdown">
+            <button class="dropbtn">Patterns ▾</button>
+            <div class="dropdown-menu">
+              <a href="patterns.html">All Patterns</a
+              ><a href="patterns.html#bags">Bags</a
+              ><a href="patterns.html#clothing">Clothing</a
+              ><a href="patterns.html#home">Home Décor</a
+              ><a href="patterns.html#beginner">Beginner Friendly</a>
+            </div>
+          </div>
+          <a href="about.html">About</a><a href="contact.html">Contact</a
+          ><a href="policy.html">Policy</a>
+        </nav>
+        <div class="nav-actions">
+          <a class="icon-btn" href="wishlist.html" aria-label="Wishlist"
+            ><i class="ri-heart-line"></i
+            ><span class="counter" data-wish-count>0</span></a
+          ><a class="icon-btn" href="cart.html" aria-label="My Basket"
+            ><i class="ri-shopping-basket-2-line"></i
+            ><span class="counter" data-cart-count>0</span></a
+          ><a class="btn btn-light btn-small" data-auth-link href="login.html"
+            >Login</a
+          ><button
+            id="menuBtn"
+            class="icon-btn menu-btn" 
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+      <div id="mobilePanel" class="mobile-panel container">
+        <a href="index.html">Home</a><a href="patterns.html">Patterns</a
+        ><a href="about.html">About</a><a href="contact.html">Contact</a
+        ><a href="policy.html">Policy</a><a href="login.html">Login</a>
+      </div>
+    </header>
+    <main>
+      <section class="hero">
+        <div class="container">
+          <div class="hero-grid">
+            <div>
+              <div class="eyebrow">Modern crochet patterns</div>
+              <h1>Patterns made for slow, beautiful making.</h1>
+              <p class="muted">
+                Thoughtfully designed digital crochet patterns with clear
+                instructions, modern silhouettes, and projects you'll genuinely
+                enjoy making.
+              </p>
+              <div class="hero-actions">
+                <a class="btn btn-dark" href="patterns.html">Shop Patterns</a
+                ><a class="btn btn-light" href="#featured"
+                  >Explore Best Sellers</a
+                >
+              </div>
+              <div class="hero-note">
+                <span>✓ Digital PDF ready</span><span>✓ Clear skill levels</span
+                ><span>✓ Maker-friendly notes</span>
+              </div>
+            </div>
+            <div class="hero-media">
+              <img
+                src="assets/images/hero.svg"
+                alt="Crochet yarn and hook editorial artwork"
+              />
+              <div class="float-card">
+                <span class="eyebrow">Maker note</span
+                ><strong>Start with something beautiful.</strong
+                ><span class="muted"
+                  ><span id="startingPrice"
+                    >Beginner-friendly patterns</span
+                  ></span
+                >
+              </div>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <strong id="catalogCount">?</strong><span>Curated patterns</span>
+            </div>
+            <div class="stat">
+              <strong id="communityRating">?</strong
+              ><span>Community rating</span>
+            </div>
+            <div class="stat">
+              <strong>PDF</strong><span>Digital format</span>
+            </div>
+            <div class="stat">
+              <strong>24/7</strong><span>Account access</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="section" id="featured">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Best sellers</div>
+              <h2>Patterns worth making again.</h2>
+            </div>
+            <p class="muted">
+              A considered collection of practical, beautiful projects for
+              different skill levels.
+            </p>
+          </div>
+          <div id="featuredPatterns" class="grid grid-4"></div>
+        </div>
+      </section>
+      <section class="section-tight">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Collections</div>
+              <h2>Find your next project.</h2>
+            </div>
+            <a class="btn btn-light" href="patterns.html">View all patterns</a>
+          </div>
+          <div class="grid grid-3">
+            <a class="collection-card" href="patterns.html#bags"
+              ><img
+                src="assets/images/pattern-1.svg"
+                alt="Crochet bag collection"
+              />
+              <div class="copy">
+                <div class="pill" style="display: inline-block">
+                  Practical & polished
+                </div>
+                <h3>Bags</h3>
+              </div></a
+            ><a class="collection-card" href="patterns.html#clothing"
+              ><img
+                src="assets/images/pattern-2.svg"
+                alt="Crochet clothing collection"
+              />
+              <div class="copy">
+                <div class="pill" style="display: inline-block">
+                  Wearable pieces
+                </div>
+                <h3>Clothing</h3>
+              </div></a
+            ><a class="collection-card" href="patterns.html#home"
+              ><img
+                src="assets/images/pattern-4.svg"
+                alt="Crochet home collection"
+              />
+              <div class="copy">
+                <div class="pill" style="display: inline-block">
+                  Warm your space
+                </div>
+                <h3>Home Décor</h3>
+              </div></a
+            >
+          </div>
+        </div>
+      </section>
+      <section class="section">
+        <div class="container">
+          <div class="feature-band">
+            <div>
+              <div class="eyebrow" style="color: #d8b8a9">
+                The Crochet Theory standard
+              </div>
+              <h2>Clear enough to follow. Beautiful enough to keep.</h2>
+              <p style="color: #cfc8c4">
+                Every pattern concept is organized around confidence, clarity
+                and a finished result that feels considered.
+              </p>
+            </div>
+            <div class="feature-list">
+              <div class="feature-item">
+                <strong>01 · Clear steps</strong><br /><span
+                  style="color: #cfc8c4"
+                  >Easy-to-scan instructions and helpful notes.</span
+                >
+              </div>
+              <div class="feature-item">
+                <strong>02 · Skill levels</strong><br /><span
+                  style="color: #cfc8c4"
+                  >Know exactly what you're getting into.</span
+                >
+              </div>
+              <div class="feature-item">
+                <strong>03 · Materials</strong><br /><span
+                  style="color: #cfc8c4"
+                  >Practical yarn and hook guidance.</span
+                >
+              </div>
+              <div class="feature-item">
+                <strong>04 · Reusable access</strong><br /><span
+                  style="color: #cfc8c4"
+                  >Your purchased patterns, ready whenever you are.</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="section-tight">
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Maker notes</div>
+              <h2>Made by you.</h2>
+            </div>
+          </div>
+          <div id="makerReviews" class="grid grid-3">
+            <div class="quote" style="grid-column: 1/-1">
+              <p>
+                Made something you love? Share your experience after your first
+                purchase.
+              </p>
+              <span class="muted">Maker reviews will appear here.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="section">
+        <div class="container">
+          <div class="newsletter">
+            <div>
+              <div class="eyebrow">The maker letter</div>
+              <h2 style="font-size: 2.5rem">
+                A little inspiration for your inbox.
+              </h2>
+              <p>New patterns, seasonal ideas and thoughtful crochet notes.</p>
+            </div>
+            <form class="newsletter-form">
+              <input
+                class="input"
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                required
+              /><button class="btn btn-dark">Join the list</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <a class="brand" href="index.html">THE CROCHET THEORY</a>
+            <p class="muted" style="max-width: 360px">
+              Modern crochet patterns for thoughtful makers — clear
+              instructions, beautiful projects, and a calmer making experience.
+            </p><div class="footer-social" aria-label="Social media"><a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="ri-instagram-line" aria-hidden="true"></i></a><a href="https://www.tiktok.com/" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="ri-tiktok-line" aria-hidden="true"></i></a><a href="https://www.pinterest.com/" target="_blank" rel="noopener noreferrer" aria-label="Pinterest"><i class="ri-pinterest-line" aria-hidden="true"></i></a></div>
+          </div>
+          <div>
+            <h4>Shop</h4>
+            <a href="patterns.html">All Patterns</a
+            ><a href="patterns.html">Best Sellers</a
+            ><a href="patterns.html">Beginner Patterns</a
+            ><a href="wishlist.html">Wishlist</a>
+          </div>
+          <div>
+            <h4>Help</h4>
+            <a href="contact.html">Contact</a><a href="faq.html">FAQ</a
+            ><a href="policy.html">Digital Policy</a
+            ><a href="policy.html#refunds">Refund Policy</a>
+          </div>
+          <div>
+            <h4>Account</h4>
+            <a href="login.html">Login</a
+            ><a href="signup.html">Create Account</a
+            ><a href="account.html">My Account</a
+            ><a href="cart.html">My Basket</a>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>© 2026 THE CROCHET THEORY. All rights reserved.</span
+          ><span>Designed & Developed by <strong>codesbyali</strong></span>
+        </div>
+      </div>
+    </footer>
+    <div id="toast" class="toast"></div>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

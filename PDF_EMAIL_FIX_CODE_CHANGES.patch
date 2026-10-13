@@ -1,0 +1,1506 @@
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/CHANGES_AND_SETUP.md ./CHANGES_AND_SETUP.md
+--- /mnt/data/TCT_ORIGINAL/original/CHANGES_AND_SETUP.md	2026-09-14 11:55:21.000000000 +0000
++++ ./CHANGES_AND_SETUP.md	2026-09-14 15:04:54.108499928 +0000
+@@ -136,3 +136,13 @@
+ 
+ ### Test-environment note
+ The uploaded archive contained Windows-native `sharp` binaries, while the build/test container runs Linux. For the automated test pass, a temporary test-only Sharp compatibility shim was used and then restored. `node_modules` is intentionally excluded from the final ZIP. Running `npm install` on your Windows machine installs the correct native Sharp package for Windows.
++
++---
++
++## Latest update — PDF upload API + verification frontend
++
++The pattern PDF upload path was made more tolerant of legitimate exported PDFs while preserving private storage and structural security checks. The admin uploader now shows clear upload/validation states, page count and file size, and gives better messages for 413/proxy limits or an unwritable private directory.
++
++The customer `verify.html` experience was redesigned with a responsive Account → Verify → Ready flow, branded email state, persistent resend cooldown, success/error states, and a branded HTML verification email.
++
++See `PDF_EMAIL_FIX.md` for the exact files and validation notes.
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/PDF_EMAIL_FIX.md ./PDF_EMAIL_FIX.md
+--- /mnt/data/TCT_ORIGINAL/original/PDF_EMAIL_FIX.md	1970-01-01 00:00:00.000000000 +0000
++++ ./PDF_EMAIL_FIX.md	2026-09-14 15:04:54.108499928 +0000
+@@ -0,0 +1,89 @@
++# PDF Upload + Email Verification Fix
++
++This update keeps the existing THE CROCHET THEORY project and changes only the pattern PDF upload flow and customer email-verification experience.
++
++## 1. Pattern PDF upload API fix
++
++Updated files:
++
++- `server/uploads.js`
++- `server/pdf-worker.js`
++- `server/admin.js`
++- `admin/admin.js`
++- `admin/admin.css`
++- `tests/pdf-upload-regression.test.js`
++
++Changes:
++
++- Accepts normal PDF exports more reliably instead of requiring `%PDF-` at the exact first byte.
++- Looks for the PDF header within the first 1 KiB and `%%EOF` within the final 1 MiB.
++- Keeps the 25 MB maximum and private-file storage.
++- Removes the old raw-binary keyword scan that could reject a legitimate compressed PDF by accident.
++- Keeps structural checks for JavaScript, executable actions and embedded files.
++- Gives the validator more time/memory for real crochet-pattern PDFs with many images.
++- Returns PDF page count and file size to the admin interface after a successful upload.
++- Removes a newly-written private file if the database insert fails, avoiding orphaned files.
++- Gives a clear error when `PRIVATE_DIR` is not writable.
++- Adds clearer 413 / proxy upload-limit messaging.
++- Admin UI now checks file size/type before upload and shows uploading, success and error states.
++
++### PDF requirements
++
++- Maximum size: 25 MB
++- Unencrypted PDF
++- 1–1,000 pages
++- No JavaScript, executable actions or embedded files
++
++If a hosting provider has a lower request-body limit than 25 MB, that provider/proxy limit must also be increased or the PDF must be optimized below that limit.
++
++## 2. Improved email-verification frontend
++
++Updated files:
++
++- `verify.html`
++- `assets/verify.js`
++- `assets/store.css`
++- `server/email-verification.js`
++- `tests/verification-ui-static.test.js`
++- `tests/customer-ui.js`
++
++Changes:
++
++- Premium two-panel responsive verification UI.
++- Account → Verify → Ready progress indicator.
++- Clear verification states for sent, verifying, success and expired/used links.
++- Email address chip when the address is known from signup/resend.
++- Persistent 60-second resend countdown for the current browser session.
++- Better server-unreachable and resend-error messages.
++- Mobile responsive layout and improved accessibility/status announcements.
++- Remix Icon stylesheet is now loaded on the verification page.
++- Branded HTML verification email plus plain-text fallback.
++- Verification link remains single-use and expires after 24 hours.
++
++## Run
++
++```bash
++npm install
++npm run dev
++```
++
++Open:
++
++```text
++http://localhost:5500/admin
++```
++
++For email verification, configure SMTP in `.env` and keep `APP_URL` equal to the URL customers actually open.
++
++## Latest validation
++
++The latest changed JavaScript files pass `node --check`.
++
++Focused regression tests run successfully:
++
++```text
++2 tests passed
++0 failed
++```
++
++These focused tests cover the PDF envelope checks and the required verification-page UI structure. The complete dependency-based API/browser suite should be run after `npm install` on the target machine.
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/README.md ./README.md
+--- /mnt/data/TCT_ORIGINAL/original/README.md	2026-09-14 11:55:21.000000000 +0000
++++ ./README.md	2026-09-14 15:04:54.562931235 +0000
+@@ -184,7 +184,7 @@
+ 
+ ## Customer email verification
+ 
+-New signups receive a single-use verification link that expires after 24 hours. Unverified new accounts cannot sign in. Customers can resend from verify.html, with a one-minute cooldown. Existing accounts keep their access and can verify from their profile. Reviews require a purchased pattern; customers see their moderation status and may update pending or published reviews, which returns them to moderation. Admin > Users management shows distinct purchased patterns, current download access, confirmed orders and email status.
++New signups receive a single-use verification link that expires after 24 hours. Unverified new accounts cannot sign in. The verification page now uses a responsive Account → Verify → Ready flow with clear sent/success/error states, a persistent one-minute resend cooldown, and improved mobile accessibility. Verification emails include a branded HTML button plus a plain-text fallback. Existing accounts keep their access and can verify from their profile. Reviews require a purchased pattern; customers see their moderation status and may update pending or published reviews, which returns them to moderation. Admin > Users management shows distinct purchased patterns, current download access, confirmed orders and email status.
+ 
+ For Gmail SMTP, set SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_SECURE=false, SMTP_USER to the sending Gmail address, SMTP_PASSWORD to its Google app password, and MAIL_FROM to that sender in the private .env file. APP_URL must be the public HTTPS store URL so email links work for customers. Keep credentials out of .env.example. Restart the Node server after changing configuration.
+ 
+@@ -201,3 +201,8 @@
+ The checkout displays Cardholder Name, Card Number, Expiry, CVV, phone, country, state, city and ZIP. A valid-format test submission is marked successful and unlocks the purchased PDF, but **no real card is charged and no money is sent to Payoneer**. Raw PAN/expiry/CVV are discarded in the browser and are not posted to the server.
+ 
+ Before a real launch, set `PAYMENT_TEST_MODE=false`, use `NODE_ENV=production`, configure HTTPS, and connect only an approved Payoneer payment integration. See `PAYMENT_SETUP.md` and `PAYMENT_TEST_MODE.md`.
++
++
++## Latest PDF/email update
++
++See `PDF_EMAIL_FIX.md` for the PDF upload API fix, admin upload states, and verification frontend changes.
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/admin/admin.css ./admin/admin.css
+--- /mnt/data/TCT_ORIGINAL/original/admin/admin.css	2026-09-14 11:07:29.000000000 +0000
++++ ./admin/admin.css	2026-09-14 14:58:25.958837910 +0000
+@@ -1604,3 +1604,53 @@
+   border: 1px solid var(--line, #e7ddd4);
+   background: #171513;
+ }
++
++/* Reliable pattern delivery upload state */
++.upload-card {
++  padding: 14px;
++  border: 1px solid var(--line);
++  border-radius: 12px;
++  background: #fbfcf9;
++}
++.pdf-upload-card input[type="file"] {
++  width: 100%;
++  padding: 10px;
++  border: 1px dashed #b8c7b4;
++  border-radius: 9px;
++  background: #fff;
++  cursor: pointer;
++}
++.upload-status {
++  display: block;
++  line-height: 1.5;
++  color: var(--muted);
++}
++.upload-status.is-uploading {
++  color: #6a5a2a;
++}
++.upload-status.is-uploading::before {
++  content: "";
++  display: inline-block;
++  width: 9px;
++  height: 9px;
++  margin-right: 7px;
++  border: 2px solid #d8cfaa;
++  border-top-color: #806d31;
++  border-radius: 50%;
++  animation: spin .8s linear infinite;
++  vertical-align: -1px;
++}
++.upload-status.is-success {
++  color: #3f6b47;
++  font-weight: 600;
++}
++.upload-status.is-error {
++  color: #9d3939;
++  font-weight: 600;
++}
++.upload-meta {
++  font-size: 10px;
++  font-weight: 500;
++  color: var(--muted);
++  padding-top: 2px;
++}
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/admin/admin.js ./admin/admin.js
+--- /mnt/data/TCT_ORIGINAL/original/admin/admin.js	2026-09-14 11:21:39.000000000 +0000
++++ ./admin/admin.js	2026-09-14 15:02:53.885859269 +0000
+@@ -80,6 +80,12 @@
+         timeStyle: "short",
+       })
+     : "—";
++const humanFileSize = (bytes = 0) => {
++  const value = Number(bytes) || 0;
++  if (value < 1024) return `${value} B`;
++  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
++  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
++};
+ const badge = (v) =>
+   `<span class="pill ${esc(v)}">${esc(v || "—").replaceAll("_", " ")}</span>`;
+ const button = (label, action, id = "", style = "") =>
+@@ -101,6 +107,13 @@
+     },
+   });
+   const contentType = response.headers.get("content-type") || "";
++  if (response.status === 413) {
++    const error = new Error(
++      "This upload is larger than the web server/proxy allows. Use a PDF under 25 MB; if it is already smaller, increase your hosting provider's request-body upload limit.",
++    );
++    error.status = 413;
++    throw error;
++  }
+   if (!contentType.includes("application/json")) {
+     const localPreview = ["localhost", "127.0.0.1", "[::1]"].includes(
+       location.hostname,
+@@ -129,7 +142,13 @@
+       state.csrf = "";
+       renderLogin();
+     }
+-    throw new Error(data.error || "Request failed.");
++    const message =
++      response.status === 413
++        ? "This upload is larger than the server allows. Choose a PDF under 25 MB or increase the host upload limit."
++        : data.error || `Request failed (${response.status}).`;
++    const error = new Error(message);
++    error.status = response.status;
++    throw error;
+   }
+   return data;
+ }
+@@ -749,7 +768,7 @@
+     video = p.video || "";
+   dialog(
+     pid ? "Edit pattern" : "Create a pattern",
+-    `<form id="editorForm"><div class="form-grid">${field("Pattern name", "name", p.name, "text", 'required maxlength="160"', "span-two")}${field("Price (" + state.currency.toUpperCase() + ")", "price", p.price, "number", 'required min="0.50" max="100000" step="0.01"')}${field("Category", "cat", p.cat, "text", 'required maxlength="80" list="categories"')}<datalist id="categories"><option>Bags</option><option>Clothing</option><option>Home</option><option>Accessories</option></datalist>${select("Skill level", "level", ["Beginner", "Easy", "Intermediate", "Advanced"], p.level)}${select("Catalog status", "status", ["draft", "active", "unavailable"], p.status)}${field("Description", "description", p.description, "textarea", 'required maxlength="12000"', "span-two")}${field("Hook size", "hook", p.hook)}${field("Yarn / materials", "yarn", p.yarn)}${field("Estimated making time", "time", p.time)}${field("Card badge (optional)", "badge", p.badge, "text", 'maxlength="40"')}${field("Pattern details / sizes / stitch notes", "details", p.details, "textarea", 'maxlength="20000"', "span-two")}${field("Tags (comma separated)", "tags", p.tags.join(", "), "text", 'maxlength="1500"', "span-two")}<label class="check span-two"><input type="checkbox" name="featured" ${p.featured ? "checked" : ""}> Feature this pattern on the homepage</label></div><h3 class="form-section">Images & delivery</h3><p class="note">Upload JPEG, PNG or WebP images (up to 8 MB) and a PDF (up to 20 MB). Pattern PDFs are stored privately. Publishing requires an uploaded PDF.</p><div class="form-grid" style="margin-top:15px"><label class="field">Cover image<input type="file" id="coverUpload" accept="image/jpeg,image/png,image/webp"><div id="coverPreview" class="gallery-preview"><img src="${esc(cover.startsWith("assets/") ? "/" + cover : cover)}" alt="Cover preview"></div></label><label class="field">Additional images (up to 12)<input type="file" id="galleryUpload" accept="image/jpeg,image/png,image/webp" multiple><div id="galleryPreview" class="gallery-preview">${images.map((src) => `<img src="${esc(src.startsWith("assets/") ? "/" + src : src)}" alt="Additional image">`).join("")}</div>${button("Clear gallery", "clear-gallery", "", "small")}</label><label class="field">Product hover video<input id="videoUpload" type="file" accept="video/mp4,video/webm"><small id="videoStatus">${video ? "Preview video attached. Hovering the product image will play it." : "Optional MP4/WebM preview, up to 50 MB."}</small><div id="videoPreview" class="video-admin-preview">${video ? `<video src="${esc(video)}" controls muted playsinline></video>` : ""}</div>${video ? button("Remove video", "remove-video", "", "small") : ""}</label><label class="field">Downloadable pattern PDF<input id="pdfUpload" type="file" accept="application/pdf,.pdf"><small id="fileStatus">${fileId ? "A private PDF is attached. Upload a new file to replace it." : "No PDF attached yet."}</small></label></div><h3 class="form-section">Search appearance</h3><div class="form-grid">${field("SEO title", "seo_title", p.seo_title, "text", 'maxlength="70"', "span-two")}${field("SEO description", "seo_description", p.seo_description, "textarea", 'maxlength="170"', "span-two")}</div>${formEnd(pid ? "Save pattern" : "Create pattern")}`,
++    `<form id="editorForm"><div class="form-grid">${field("Pattern name", "name", p.name, "text", 'required maxlength="160"', "span-two")}${field("Price (" + state.currency.toUpperCase() + ")", "price", p.price, "number", 'required min="0.50" max="100000" step="0.01"')}${field("Category", "cat", p.cat, "text", 'required maxlength="80" list="categories"')}<datalist id="categories"><option>Bags</option><option>Clothing</option><option>Home</option><option>Accessories</option></datalist>${select("Skill level", "level", ["Beginner", "Easy", "Intermediate", "Advanced"], p.level)}${select("Catalog status", "status", ["draft", "active", "unavailable"], p.status)}${field("Description", "description", p.description, "textarea", 'required maxlength="12000"', "span-two")}${field("Hook size", "hook", p.hook)}${field("Yarn / materials", "yarn", p.yarn)}${field("Estimated making time", "time", p.time)}${field("Card badge (optional)", "badge", p.badge, "text", 'maxlength="40"')}${field("Pattern details / sizes / stitch notes", "details", p.details, "textarea", 'maxlength="20000"', "span-two")}${field("Tags (comma separated)", "tags", p.tags.join(", "), "text", 'maxlength="1500"', "span-two")}<label class="check span-two"><input type="checkbox" name="featured" ${p.featured ? "checked" : ""}> Feature this pattern on the homepage</label></div><h3 class="form-section">Images & delivery</h3><p class="note">Upload JPEG, PNG or WebP images (up to 8 MB) and a PDF (up to 25 MB). Pattern PDFs are stored privately and validated before publishing.</p><div class="form-grid" style="margin-top:15px"><label class="field">Cover image<input type="file" id="coverUpload" accept="image/jpeg,image/png,image/webp"><div id="coverPreview" class="gallery-preview"><img src="${esc(cover.startsWith("assets/") ? "/" + cover : cover)}" alt="Cover preview"></div></label><label class="field">Additional images (up to 12)<input type="file" id="galleryUpload" accept="image/jpeg,image/png,image/webp" multiple><div id="galleryPreview" class="gallery-preview">${images.map((src) => `<img src="${esc(src.startsWith("assets/") ? "/" + src : src)}" alt="Additional image">`).join("")}</div>${button("Clear gallery", "clear-gallery", "", "small")}</label><label class="field">Product hover video<input id="videoUpload" type="file" accept="video/mp4,video/webm"><small id="videoStatus">${video ? "Preview video attached. Hovering the product image will play it." : "Optional MP4/WebM preview, up to 50 MB."}</small><div id="videoPreview" class="video-admin-preview">${video ? `<video src="${esc(video)}" controls muted playsinline></video>` : ""}</div>${video ? button("Remove video", "remove-video", "", "small") : ""}</label><label class="field upload-card pdf-upload-card">Downloadable pattern PDF<input id="pdfUpload" type="file" accept="application/pdf,.pdf"><small id="fileStatus" class="upload-status">${fileId ? "✓ Private PDF attached. Upload a new PDF to replace it." : "Choose a PDF up to 25 MB. The file is checked before it is attached."}</small><div id="pdfMeta" class="upload-meta">${fileId ? "Secure delivery enabled" : "PDF only · max 25 MB · unencrypted"}</div></label></div><h3 class="form-section">Search appearance</h3><div class="form-grid">${field("SEO title", "seo_title", p.seo_title, "text", 'maxlength="70"', "span-two")}${field("SEO description", "seo_description", p.seo_description, "textarea", 'maxlength="170"', "span-two")}</div>${formEnd(pid ? "Save pattern" : "Create pattern")}`,
+     async (v) => {
+       const payload = {
+         name: v.name,
+@@ -785,18 +804,33 @@
+   let uploading = 0;
+   async function uploadFile(file, kind) {
+     const body = new FormData();
+-    body.append("file", file);
+-    return api("/admin/uploads/" + kind, { method: "POST", body });
++    body.append("file", file, file.name || `${kind}-upload`);
++    try {
++      return await api("/admin/uploads/" + kind, { method: "POST", body });
++    } catch (error) {
++      if (error instanceof TypeError || /Failed to fetch/i.test(error.message || ""))
++        throw new Error(
++          "Upload API could not be reached. Make sure the Node server is running with npm run dev and open the admin at http://localhost:5500/admin.",
++        );
++      throw error;
++    }
+   }
+-  async function handleUpload(input, fn) {
++  async function handleUpload(input, fn, statusEl = null) {
+     uploading++;
+     $("#editorForm [type=submit]").disabled = true;
+     input.disabled = true;
+-    notice("Uploading and validating your file…");
++    if (statusEl) {
++      statusEl.className = "upload-status is-uploading";
++      statusEl.textContent = "Uploading and validating…";
++    } else notice("Uploading and validating your file…");
+     try {
+       await fn();
+-      notice("Upload complete. Save the pattern to apply your changes.");
++      if (!statusEl) notice("Upload complete. Save the pattern to apply your changes.");
+     } catch (e) {
++      if (statusEl) {
++        statusEl.className = "upload-status is-error";
++        statusEl.textContent = e.message;
++      }
+       notice(e.message, true);
+     } finally {
+       uploading--;
+@@ -849,11 +883,25 @@
+   $("#pdfUpload").addEventListener("change", (e) => {
+     if (!e.target.files.length) return;
+     const file = e.target.files[0];
+-    handleUpload(e.target, async () => {
+-      const r = await uploadFile(file, "pdf");
+-      fileId = r.id;
+-      $("#fileStatus").textContent = r.name + " · private file attached";
+-    });
++    const status = $("#fileStatus");
++    const meta = $("#pdfMeta");
++    handleUpload(
++      e.target,
++      async () => {
++        if (file.size > 25 * 1024 * 1024)
++          throw new Error("This PDF is over 25 MB. Export a smaller/optimized copy and try again.");
++        if (!/\.pdf$/i.test(file.name) && file.type && file.type !== "application/pdf")
++          throw new Error("Choose a PDF file for the downloadable pattern.");
++        status.textContent = `Validating ${file.name} (${humanFileSize(file.size)})…`;
++        const r = await uploadFile(file, "pdf");
++        fileId = r.id;
++        status.className = "upload-status is-success";
++        status.textContent = `✓ ${r.name} attached successfully`;
++        meta.textContent = `${humanFileSize(r.size || file.size)}${r.pages ? ` · ${r.pages} page${r.pages === 1 ? "" : "s"}` : ""} · private download`;
++        notice("PDF upload complete. Save the pattern to apply your changes.");
++      },
++      status,
++    );
+   });
+   $("[data-action=clear-gallery]").addEventListener("click", () => {
+     images = [];
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/assets/store.css ./assets/store.css
+--- /mnt/data/TCT_ORIGINAL/original/assets/store.css	2026-09-14 11:50:27.000000000 +0000
++++ ./assets/store.css	2026-09-14 15:04:24.647800699 +0000
+@@ -790,3 +790,391 @@
+   padding-left: 42px;
+   letter-spacing: .04em;
+ }
++
++/* Premium email verification experience */
++.verification-page {
++  background: #f8f4ef;
++}
++.verification-header {
++  background: rgba(255, 252, 248, 0.92);
++  backdrop-filter: blur(14px);
++  border-bottom: 1px solid var(--line);
++}
++.verification-back {
++  display: inline-flex;
++  align-items: center;
++  gap: 8px;
++  color: var(--ink);
++  font-size: 13px;
++  font-weight: 650;
++}
++.verification-shell {
++  background:
++    radial-gradient(circle at 8% 15%, rgba(169, 95, 73, 0.09), transparent 28%),
++    radial-gradient(circle at 92% 90%, rgba(126, 143, 111, 0.12), transparent 30%),
++    #f8f4ef !important;
++  padding: 44px 20px !important;
++}
++.verification-layout {
++  width: min(980px, 100%);
++  display: grid;
++  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.15fr);
++  border: 1px solid rgba(86, 65, 52, 0.12);
++  border-radius: 32px;
++  overflow: hidden;
++  background: var(--paper);
++  box-shadow: 0 28px 90px rgba(73, 50, 35, 0.10);
++}
++.verification-story {
++  position: relative;
++  min-height: 620px;
++  padding: 44px 38px;
++  display: flex;
++  flex-direction: column;
++  justify-content: space-between;
++  color: #fdf8f3;
++  background:
++    radial-gradient(circle at 80% 20%, rgba(232, 197, 169, 0.20), transparent 30%),
++    linear-gradient(155deg, #3d302a 0%, #2b2522 66%, #423328 100%);
++}
++.verification-story::after {
++  content: "";
++  position: absolute;
++  width: 260px;
++  height: 260px;
++  right: -120px;
++  bottom: 70px;
++  border-radius: 50%;
++  border: 1px solid rgba(255, 255, 255, 0.10);
++  box-shadow: 0 0 0 34px rgba(255, 255, 255, 0.025), 0 0 0 68px rgba(255, 255, 255, 0.018);
++  pointer-events: none;
++}
++.verification-story-mark {
++  width: 58px;
++  height: 58px;
++  display: grid;
++  place-items: center;
++  border: 1px solid rgba(255, 255, 255, 0.16);
++  border-radius: 18px;
++  background: rgba(255, 255, 255, 0.08);
++  font-size: 28px;
++}
++.verification-kicker {
++  display: block;
++  margin-bottom: 14px;
++  color: #e7cbb9;
++  font-size: 11px;
++  font-weight: 750;
++  letter-spacing: 0.16em;
++  text-transform: uppercase;
++}
++.verification-story h2 {
++  max-width: 360px;
++  margin: 0;
++  font-family: var(--serif);
++  font-size: clamp(34px, 4vw, 48px);
++  line-height: 1.04;
++  letter-spacing: -0.035em;
++}
++.verification-story p {
++  max-width: 330px;
++  margin: 18px 0 0;
++  color: rgba(255, 255, 255, 0.68);
++  font-size: 14px;
++  line-height: 1.7;
++}
++.verification-security-list {
++  display: grid;
++  gap: 12px;
++  position: relative;
++  z-index: 1;
++}
++.verification-security-list span {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  color: rgba(255, 255, 255, 0.78);
++  font-size: 12px;
++}
++.verification-security-list i {
++  color: #e7cbb9;
++  font-size: 16px;
++}
++.customer-auth-page .verification-card {
++  width: 100% !important;
++  max-width: none;
++  padding: 38px 42px !important;
++  border: 0;
++  border-radius: 0;
++  box-shadow: none !important;
++  align-self: stretch;
++}
++.verification-steps {
++  display: grid;
++  grid-template-columns: repeat(3, 1fr);
++  gap: 0;
++  margin-bottom: 30px;
++}
++.verification-step {
++  position: relative;
++  display: grid;
++  justify-items: center;
++  gap: 7px;
++  color: #9b9088;
++}
++.verification-step:not(:last-child)::after {
++  content: "";
++  position: absolute;
++  top: 15px;
++  left: calc(50% + 18px);
++  width: calc(100% - 36px);
++  height: 1px;
++  background: #e5ddd6;
++}
++.verification-step span {
++  width: 30px;
++  height: 30px;
++  display: grid;
++  place-items: center;
++  border-radius: 50%;
++  border: 1px solid #ddd3cb;
++  background: #fff;
++  font-size: 12px;
++  font-weight: 750;
++  position: relative;
++  z-index: 1;
++}
++.verification-step small {
++  font-size: 10px;
++  font-weight: 700;
++  letter-spacing: 0.06em;
++  text-transform: uppercase;
++}
++.verification-step.is-active,
++.verification-step.is-complete {
++  color: var(--accent);
++}
++.verification-step.is-active span {
++  border-color: var(--accent);
++  box-shadow: 0 0 0 4px rgba(169, 95, 73, 0.08);
++}
++.verification-step.is-complete span {
++  border-color: #789174;
++  background: #789174;
++  color: #fff;
++}
++.verification-state-icon {
++  width: 58px;
++  height: 58px;
++  display: grid;
++  place-items: center;
++  margin-bottom: 18px;
++  border-radius: 18px;
++  background: #f3e8df;
++  color: var(--accent);
++  font-size: 27px;
++}
++.verification-state-icon.is-success {
++  background: #e7f0e5;
++  color: #4e714d;
++}
++.verification-state-icon.is-working i {
++  animation: verificationPulse 1s ease-in-out infinite alternate;
++}
++@keyframes verificationPulse {
++  to { transform: scale(1.12); opacity: 0.55; }
++}
++.verification-card .auth-intro {
++  max-width: 540px;
++  margin-bottom: 16px;
++}
++.verification-email-chip {
++  width: fit-content;
++  max-width: 100%;
++  display: inline-flex;
++  align-items: center;
++  gap: 9px;
++  padding: 9px 12px;
++  margin: 0 0 18px;
++  border: 1px solid #e4d8ce;
++  border-radius: 999px;
++  background: #fbf6f1;
++  color: #5b4940;
++  font-size: 12px;
++  font-weight: 650;
++  overflow-wrap: anywhere;
++}
++.verification-card .notice.show {
++  border: 1px solid #ddd2c8;
++  background: #f8f3ee;
++  color: #5b4b42;
++  border-radius: 12px;
++  padding: 12px 14px;
++}
++.verification-card .notice.success {
++  border-color: #cddfc9;
++  background: #eef5ec;
++  color: #426341;
++}
++.verification-card .notice.error {
++  border-color: #ebc7c2;
++  background: #fff0ee;
++  color: #8f3f37;
++}
++.verification-primary-action {
++  margin: 8px 0 16px;
++}
++.verification-fineprint {
++  margin: 9px 0 0;
++  color: var(--muted);
++  text-align: center;
++  font-size: 11px;
++}
++.verification-tip {
++  display: flex;
++  gap: 12px;
++  align-items: flex-start;
++  padding: 13px 14px;
++  border: 1px solid var(--line);
++  border-radius: 12px;
++  background: #fcfaf7;
++}
++.verification-tip > i {
++  color: var(--accent);
++  font-size: 18px;
++  margin-top: 1px;
++}
++.verification-tip strong,
++.verification-tip span {
++  display: block;
++}
++.verification-tip strong {
++  font-size: 12px;
++  margin-bottom: 3px;
++}
++.verification-tip span {
++  color: var(--muted);
++  font-size: 11px;
++  line-height: 1.5;
++}
++.verification-card .verification-resend {
++  border-top: 1px solid var(--line);
++  padding-top: 22px;
++  margin-top: 22px;
++}
++.verification-resend-head {
++  display: flex;
++  justify-content: space-between;
++  gap: 18px;
++  align-items: flex-start;
++  margin-bottom: 14px;
++}
++.verification-resend-head h3 {
++  margin: 0 0 4px;
++  font-size: 16px;
++}
++.verification-resend-head p {
++  margin: 0;
++}
++.verification-resend-head > i {
++  color: #a58f81;
++  font-size: 20px;
++}
++.verification-resend-button {
++  width: 100%;
++  min-height: 45px;
++  justify-content: center;
++}
++.verification-resend-button:disabled,
++.verification-card .btn:disabled {
++  cursor: not-allowed;
++  opacity: 0.62;
++}
++.verification-card .btn.is-loading i {
++  animation: verificationSpin .8s linear infinite;
++}
++@keyframes verificationSpin {
++  to { transform: rotate(360deg); }
++}
++.verification-footer-links {
++  display: flex;
++  justify-content: space-between;
++  gap: 14px;
++  margin-top: 20px;
++  padding-top: 18px;
++  border-top: 1px solid var(--line);
++}
++.verification-footer-links a {
++  display: inline-flex;
++  gap: 7px;
++  align-items: center;
++  color: var(--muted);
++  font-size: 11px;
++  font-weight: 600;
++}
++.verification-footer-links a:hover {
++  color: var(--accent);
++}
++@media (max-width: 800px) {
++  .verification-layout {
++    grid-template-columns: 1fr;
++    max-width: 560px;
++  }
++  .verification-story {
++    min-height: auto;
++    padding: 26px;
++    gap: 28px;
++  }
++  .verification-story > div:nth-child(2) {
++    display: none;
++  }
++  .verification-story-mark {
++    width: 48px;
++    height: 48px;
++    font-size: 23px;
++  }
++  .verification-security-list {
++    grid-template-columns: 1fr 1fr;
++  }
++  .verification-security-list span:last-child {
++    display: none;
++  }
++  .customer-auth-page .verification-card {
++    padding: 30px !important;
++  }
++}
++@media (max-width: 520px) {
++  .verification-shell {
++    padding: 22px 14px !important;
++  }
++  .verification-layout {
++    border-radius: 24px;
++  }
++  .verification-story {
++    padding: 20px;
++  }
++  .verification-security-list {
++    grid-template-columns: 1fr;
++  }
++  .customer-auth-page .verification-card {
++    padding: 25px 20px !important;
++  }
++  .verification-card h1 {
++    font-size: 30px;
++  }
++  .verification-footer-links {
++    flex-direction: column;
++  }
++  .verification-back {
++    font-size: 0;
++    width: 40px;
++    height: 40px;
++    justify-content: center;
++    border: 1px solid var(--line);
++    border-radius: 50%;
++  }
++  .verification-back i { font-size: 18px; }
++}
++.verification-page .verification-card .btn {
++  margin-bottom: 0;
++}
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/assets/verify.js ./assets/verify.js
+--- /mnt/data/TCT_ORIGINAL/original/assets/verify.js	2026-09-14 11:02:30.000000000 +0000
++++ ./assets/verify.js	2026-09-14 14:59:10.233102928 +0000
+@@ -1,61 +1,190 @@
+ "use strict";
++
+ const verificationParams = new URLSearchParams(location.hash.slice(1));
+ const verificationToken = verificationParams.get("token");
++const verificationEmailFromLink = verificationParams.get("email") || "";
++const verificationWasSent = verificationParams.get("sent");
+ let verificationNext = verificationParams.get("next");
+-try { verificationNext ||= sessionStorage.getItem("tct_verify_next"); if (verificationNext) sessionStorage.setItem("tct_verify_next", verificationNext); } catch {}
+-const verificationNotice = document.querySelector("#verificationNotice");
+-const verificationForm = document.querySelector("#verifyEmailForm");
++
++try {
++  verificationNext ||= sessionStorage.getItem("tct_verify_next");
++  if (verificationNext) sessionStorage.setItem("tct_verify_next", verificationNext);
++} catch {}
++
++const notice = document.querySelector("#verificationNotice");
++const verifyForm = document.querySelector("#verifyEmailForm");
+ const resendForm = document.querySelector("#resendVerificationForm");
+-document.querySelector("#verificationEmail").value = verificationParams.get("email") || "";
++const verifyButton = document.querySelector("#verifyEmailButton");
++const resendButton = document.querySelector("#resendVerificationButton");
++const emailInput = document.querySelector("#verificationEmail");
++const emailChip = document.querySelector("#verificationEmailChip");
++const emailDisplay = document.querySelector("#verificationEmailDisplay");
++const waiting = document.querySelector("#verificationWaiting");
++const heading = document.querySelector("#verificationHeading");
++const intro = document.querySelector("#verificationIntro");
++const stateIcon = document.querySelector("#verificationStateIcon");
++const stepCurrent = document.querySelector("#verificationStepCurrent");
++const stepReady = document.querySelector("#verificationStepReady");
++const signIn = document.querySelector("#verifiedSignIn");
++const originalResendLabel = "Resend verification email";
++
++emailInput.value = verificationEmailFromLink;
+ history.replaceState(null, "", "verify.html");
+-function verificationMessage(message, error = false) {
+-  verificationNotice.textContent = message;
+-  verificationNotice.className = "notice show" + (error ? " error" : "");
+-  verificationNotice.setAttribute("role", error ? "alert" : "status");
++
++function setNotice(message = "", type = "info") {
++  notice.textContent = message;
++  notice.className = "notice" + (message ? " show" : "") + (type === "error" ? " error" : type === "success" ? " success" : "");
++  notice.setAttribute("role", type === "error" ? "alert" : "status");
+ }
+-if (verificationToken) {
+-  verificationForm.hidden = false;
+-  document.querySelector("#verificationHeading").textContent = "Verify your email.";
+-  document.querySelector("#verificationIntro").textContent = "Choose Verify email to confirm your address. You can then sign in and start your next project.";
+-} else if (verificationParams.get("sent") === "0") {
+-  verificationMessage("Your account was created, but the email could not be sent. Try resending below, or contact store support.", true);
++
++function setEmailChip(email) {
++  if (!email) return;
++  emailDisplay.textContent = email;
++  emailChip.hidden = false;
++}
++
++function setButtonLoading(button, loading, label) {
++  button.disabled = loading;
++  button.classList.toggle("is-loading", loading);
++  const span = button.querySelector("span");
++  if (span) span.textContent = loading ? "Please wait…" : label;
++}
++
++function setVerifiedState(message) {
++  heading.textContent = "Email verified.";
++  intro.textContent = "Your account is protected and ready. Sign in to access your pattern library, orders and downloads.";
++  stateIcon.className = "verification-state-icon is-success";
++  stateIcon.innerHTML = '<i class="ri-check-line" aria-hidden="true"></i>';
++  stepCurrent.classList.remove("is-active");
++  stepCurrent.classList.add("is-complete");
++  stepCurrent.querySelector("span").innerHTML = '<i class="ri-check-line"></i>';
++  stepReady.classList.add("is-active");
++  verifyForm.hidden = true;
++  resendForm.hidden = true;
++  waiting.hidden = true;
++  signIn.hidden = false;
++  setNotice(message || "Your email address has been verified successfully.", "success");
++  if (["cart.html", "account.html", "wishlist.html"].includes(verificationNext)) {
++    signIn.href = "login.html?next=" + encodeURIComponent(verificationNext);
++  }
++  signIn.focus({ preventScroll: true });
+ }
++
+ async function verificationRequest(path, body) {
+-  const sessionResponse = await fetch("/api/session", { credentials: "same-origin" });
+-  if (!sessionResponse.ok) throw new Error("Could not connect. Please refresh and try again.");
++  let sessionResponse;
++  try {
++    sessionResponse = await fetch("/api/session", { credentials: "same-origin" });
++  } catch {
++    throw new Error("Could not reach the store server. Start it with npm run dev and refresh this page.");
++  }
++  if (!sessionResponse.ok) throw new Error("Could not create a secure session. Refresh and try again.");
+   const session = await sessionResponse.json();
+-  const response = await fetch("/api/auth/" + path, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrf }, body: JSON.stringify(body) });
+-  const result = await response.json();
+-  if (!response.ok) throw new Error(result.error || "Please try again shortly.");
++  const response = await fetch("/api/auth/" + path, {
++    method: "POST",
++    credentials: "same-origin",
++    headers: { "Content-Type": "application/json", "X-CSRF-Token": session.csrf },
++    body: JSON.stringify(body),
++  });
++  const result = await response.json().catch(() => ({}));
++  if (!response.ok) {
++    const error = new Error(result.error || "Please try again shortly.");
++    error.status = response.status;
++    throw error;
++  }
+   return result;
+ }
+-verificationForm.addEventListener("submit", async (event) => {
++
++function cooldownKey(email) {
++  return "tct_verify_resend_until:" + String(email || "").trim().toLowerCase();
++}
++
++let cooldownTimer = null;
++function startResendCooldown(seconds = 60) {
++  const email = emailInput.value.trim();
++  const until = Date.now() + seconds * 1000;
++  try { sessionStorage.setItem(cooldownKey(email), String(until)); } catch {}
++  renderCooldown(until);
++}
++
++function renderCooldown(until) {
++  clearInterval(cooldownTimer);
++  const update = () => {
++    const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
++    const span = resendButton.querySelector("span");
++    if (remaining > 0) {
++      resendButton.disabled = true;
++      if (span) span.textContent = `Resend available in ${remaining}s`;
++      return;
++    }
++    clearInterval(cooldownTimer);
++    resendButton.disabled = false;
++    if (span) span.textContent = originalResendLabel;
++    try { sessionStorage.removeItem(cooldownKey(emailInput.value)); } catch {}
++  };
++  update();
++  cooldownTimer = setInterval(update, 1000);
++}
++
++function restoreCooldown() {
++  try {
++    const until = Number(sessionStorage.getItem(cooldownKey(emailInput.value)) || 0);
++    if (until > Date.now()) renderCooldown(until);
++  } catch {}
++}
++
++if (verificationEmailFromLink) setEmailChip(verificationEmailFromLink);
++
++if (verificationToken) {
++  verifyForm.hidden = false;
++  waiting.hidden = true;
++  heading.textContent = "Verify your email.";
++  intro.textContent = "Your secure verification link is ready. Confirm below to activate your account.";
++  stateIcon.innerHTML = '<i class="ri-shield-keyhole-line" aria-hidden="true"></i>';
++  resendForm.classList.add("is-secondary");
++} else if (verificationWasSent === "0") {
++  setNotice("Your account was created, but the verification email could not be delivered. Check the email below and resend it.", "error");
++} else if (verificationWasSent === "1") {
++  setNotice("Verification email sent. It may take a minute to arrive — please also check Spam or Promotions.", "success");
++}
++restoreCooldown();
++
++verifyForm.addEventListener("submit", async (event) => {
+   event.preventDefault();
+-  const button = verificationForm.querySelector("button");
+-  button.disabled = true;
++  setNotice();
++  setButtonLoading(verifyButton, true, "Verify email address");
++  stateIcon.classList.add("is-working");
+   try {
+     const result = await verificationRequest("verify-email", { token: verificationToken });
+-    verificationMessage(result.message);
+-    verificationForm.hidden = true;
+-    resendForm.hidden = true;
+-    document.querySelector("#verificationHeading").textContent = "You’re verified.";
+-    document.querySelector("#verificationIntro").textContent = "Your email address is confirmed. Your account is ready.";
+-    const signIn = document.querySelector("#verifiedSignIn");
+-    signIn.hidden = false;
+-    if (["cart.html", "account.html", "wishlist.html"].includes(verificationNext)) signIn.href = "login.html?next=" + encodeURIComponent(verificationNext);
+-    signIn.focus();
+-  } catch (error) { verificationMessage(error.message, true); }
+-  finally { button.disabled = false; }
++    setVerifiedState(result.message);
++  } catch (error) {
++    stateIcon.classList.remove("is-working");
++    setNotice(error.message, "error");
++    heading.textContent = "This link needs attention.";
++    intro.textContent = "The verification link may have expired or already been used. If you are not verified yet, request a fresh link below.";
++    resendForm.hidden = false;
++    waiting.hidden = true;
++  } finally {
++    setButtonLoading(verifyButton, false, "Verify email address");
++  }
+ });
++
+ resendForm.addEventListener("submit", async (event) => {
+   event.preventDefault();
+-  const button = resendForm.querySelector("button");
+-  button.disabled = true;
++  const email = emailInput.value.trim().toLowerCase();
++  if (!email) return;
++  setNotice();
++  setButtonLoading(resendButton, true, originalResendLabel);
+   try {
+-    const result = await verificationRequest("resend-verification", { email: document.querySelector("#verificationEmail").value.trim() });
+-    verificationMessage(result.message);
+-    let seconds = 60;
+-    button.textContent = `Resend in ${seconds}s`;
+-    const timer = setInterval(() => { seconds--; button.textContent = seconds ? `Resend in ${seconds}s` : "Resend verification"; if (!seconds) { clearInterval(timer); button.disabled = false; } }, 1000);
+-  } catch (error) { verificationMessage(error.message, true); button.disabled = false; }
++    const result = await verificationRequest("resend-verification", { email });
++    emailInput.value = email;
++    setEmailChip(email);
++    heading.textContent = "Check your inbox.";
++    intro.textContent = "A fresh verification link has been requested. Open the newest message from THE CROCHET THEORY.";
++    setNotice(result.message, "success");
++    startResendCooldown(60);
++  } catch (error) {
++    setNotice(error.message, "error");
++    if (error.status === 429) startResendCooldown(60);
++    else setButtonLoading(resendButton, false, originalResendLabel);
++  }
+ });
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/server/admin.js ./server/admin.js
+--- /mnt/data/TCT_ORIGINAL/original/server/admin.js	2026-09-14 11:21:26.000000000 +0000
++++ ./server/admin.js	2026-09-14 15:00:59.780567678 +0000
+@@ -1,7 +1,7 @@
+ import { Router } from "express";
+ import multer from "multer";
+ import sharp from "sharp";
+-import { validatePdf } from "./uploads.js";
++import { assertPdfEnvelope, validatePdf, PDF_MAX_BYTES } from "./uploads.js";
+ import { writeFile, unlink } from "node:fs/promises";
+ import { join } from "node:path";
+ import { z } from "zod";
+@@ -318,35 +318,28 @@
+     const fid = id();
+     let diskName, original, kind;
+     if (req.params.kind === "pdf") {
+-      if (req.file.size > 25 * 1024 * 1024)
+-        fail(400, "Use a PDF under 25 MB.");
+-      const pdfHeader = req.file.buffer.subarray(0, 5).toString();
+-      const pdfTail = req.file.buffer.subarray(-65536).toString("latin1");
+-      if (
+-        !req.file.originalname.toLowerCase().endsWith(".pdf") ||
+-        pdfHeader !== "%PDF-" ||
+-        !pdfTail.includes("%%EOF")
+-      )
+-        fail(400, "Upload a valid PDF file.");
+-      if (
+-        /\/(JavaScript|JS\b|Launch|EmbeddedFile|OpenAction|AA\b|RichMedia)/i.test(
+-          req.file.buffer.toString("latin1"),
+-        )
+-      )
+-        fail(
+-          400,
+-          "PDFs with active content or embedded files are not accepted.",
+-        );
+-      await validatePdf(req.file.buffer);
++      if (req.file.size > PDF_MAX_BYTES) fail(400, "Use a PDF under 25 MB.");
++      assertPdfEnvelope(req.file.buffer, req.file.originalname);
++      const validation = await validatePdf(req.file.buffer);
+       diskName = `${fid}.pdf`;
+-      original = req.file.originalname
++      original = (req.file.originalname || "pattern.pdf")
+         .replace(/[^a-zA-Z0-9 ._-]/g, "_")
+-        .slice(-150);
++        .slice(-150) || "pattern.pdf";
+       kind = "pdf";
+-      await writeFile(join(config.privateDir, diskName), req.file.buffer, {
+-        flag: "wx",
+-        mode: 0o600,
+-      });
++      try {
++        await writeFile(join(config.privateDir, diskName), req.file.buffer, {
++          flag: "wx",
++          mode: 0o600,
++        });
++      } catch (error) {
++        if (["EACCES", "EPERM", "EROFS"].includes(error.code))
++          fail(
++            503,
++            "The private pattern folder is not writable. Check PRIVATE_DIR permissions and restart the server.",
++          );
++        throw error;
++      }
++      req.pdfValidation = validation;
+     } else if (req.params.kind === "image") {
+       if (
+         req.file.size > 8 * 1024 * 1024 ||
+@@ -394,20 +387,28 @@
+         mode: 0o644,
+       });
+     } else fail(400, "Invalid upload type.");
+-    run(
+-      db,
+-      "INSERT INTO files VALUES(?,?,?,?,?,?)",
+-      fid,
+-      kind,
+-      diskName,
+-      original,
+-      req.file.size,
+-      now(),
+-    );
++    try {
++      run(
++        db,
++        "INSERT INTO files VALUES(?,?,?,?,?,?)",
++        fid,
++        kind,
++        diskName,
++        original,
++        req.file.size,
++        now(),
++      );
++    } catch (error) {
++      const folder = kind === "pdf" ? config.privateDir : config.uploadDir;
++      await unlink(join(folder, diskName)).catch(() => {});
++      throw error;
++    }
+     audit(db, req.user.id, "file.uploaded", fid, { kind, name: original });
+     res.status(201).json({
+       id: fid,
+       name: original,
++      size: req.file.size,
++      pages: kind === "pdf" ? req.pdfValidation?.pageCount || null : null,
+       url: ["image", "video"].includes(kind) ? `/media/${diskName}` : null,
+     });
+   });
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/server/email-verification.js ./server/email-verification.js
+--- /mnt/data/TCT_ORIGINAL/original/server/email-verification.js	2026-09-14 11:02:34.000000000 +0000
++++ ./server/email-verification.js	2026-09-14 15:00:04.760328738 +0000
+@@ -12,11 +12,13 @@
+   run(db, "DELETE FROM verification_tokens WHERE expires_at<=?", now());
+   run(db, "INSERT INTO verification_tokens VALUES(?,?,?,?)", digest(token), user.id, new Date(Date.now() + 86400000).toISOString(), now());
+   try {
++    const verifyUrl = `${config.appUrl}/verify.html#token=${token}`;
+     const result = await mailer.sendMail({
+       from,
+       to: user.email,
+       subject: "Verify your email — THE CROCHET THEORY",
+-      text: `Welcome to THE CROCHET THEORY.\n\nVerify your email address to finish creating your account:\n${config.appUrl}/verify.html#token=${token}\n\nThis link expires in 24 hours and can be used once. Open it and choose Verify email.\nIf you did not create this account, you can ignore this message.`,
++      text: `Welcome to THE CROCHET THEORY.\n\nVerify your email address to finish creating your account:\n${verifyUrl}\n\nThis secure link expires in 24 hours and can be used once.\nIf you did not create this account, you can ignore this message.`,
++      html: `<!doctype html><html><body style="margin:0;background:#f7f2ed;font-family:Arial,sans-serif;color:#2f2723"><div style="max-width:620px;margin:0 auto;padding:36px 18px"><div style="background:#fffaf6;border:1px solid #e5d9d0;border-radius:22px;overflow:hidden"><div style="padding:22px 28px;background:#342b27;color:#fff;font-size:13px;letter-spacing:2px">THE CROCHET THEORY</div><div style="padding:34px 28px"><div style="width:48px;height:48px;line-height:48px;text-align:center;border-radius:14px;background:#f2e4da;color:#a95f49;font-size:22px">✉</div><h1 style="font-family:Georgia,serif;font-size:34px;line-height:1.15;margin:22px 0 12px">Verify your email</h1><p style="font-size:15px;line-height:1.7;color:#6f625a;margin:0 0 24px">Confirm your email to protect your purchases and unlock your personal pattern library.</p><p style="margin:0 0 26px"><a href="${verifyUrl}" style="display:inline-block;background:#342b27;color:#fff;text-decoration:none;border-radius:10px;padding:14px 22px;font-weight:700">Verify email address</a></p><p style="font-size:12px;line-height:1.7;color:#8a7c73;margin:0">This secure link expires in 24 hours and can be used once. If you did not create this account, you can safely ignore this email.</p></div></div></div></body></html>`,
+     });
+     if (result?.rejected?.length || (Array.isArray(result?.accepted) && !result.accepted.length)) throw new Error("Email rejected");
+   } catch {
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/server/pdf-worker.js ./server/pdf-worker.js
+--- /mnt/data/TCT_ORIGINAL/original/server/pdf-worker.js	2026-09-14 11:07:16.000000000 +0000
++++ ./server/pdf-worker.js	2026-09-14 14:57:12.187247319 +0000
+@@ -1,59 +1,107 @@
+ import { parentPort, workerData } from "node:worker_threads";
+-import { PDFDocument, PDFDict, PDFArray, PDFName, PDFRawStream } from "pdf-lib";
++import {
++  PDFDocument,
++  PDFDict,
++  PDFArray,
++  PDFName,
++  PDFRawStream,
++} from "pdf-lib";
++
+ try {
+   const document = await PDFDocument.load(workerData, {
+     ignoreEncryption: false,
+     throwOnInvalidObject: false,
+     updateMetadata: false,
+   });
+-  if (
+-    document.isEncrypted ||
+-    document.getPageCount() < 1 ||
+-    document.getPageCount() > 1000
+-  )
++
++  const pageCount = document.getPageCount();
++  if (document.isEncrypted || pageCount < 1 || pageCount > 1000) {
+     throw new Error("Use an unencrypted PDF containing 1–1,000 pages.");
+-  const blocked = new Set([
+-    "JavaScript",
++  }
++
++  // Block executable/embedded content while allowing normal links, fonts,
++  // images, compression, metadata, bookmarks and modern object streams.
++  const blockedKeys = new Set([
+     "JS",
++    "JavaScript",
+     "Launch",
+-    "EmbeddedFile",
+-    "EmbeddedFiles",
+     "OpenAction",
+     "AA",
++    "EmbeddedFile",
++    "EmbeddedFiles",
+     "RichMedia",
+-    "XFA",
+     "SubmitForm",
+     "ImportData",
+     "GoToR",
+   ]);
++  const blockedActionNames = new Set([
++    "JavaScript",
++    "Launch",
++    "SubmitForm",
++    "ImportData",
++    "GoToR",
++  ]);
++
+   const visited = new Set();
+   let nodes = 0;
+   function inspect(object, depth = 0) {
+     if (!object || visited.has(object)) return;
+-    if (depth > 100 || ++nodes > 100000)
+-      throw new Error("PDF structure is too complex. Export a simpler PDF.");
+-    visited.add(object);
+-    if (object instanceof PDFName && blocked.has(object.decodeText()))
++    if (depth > 120 || ++nodes > 150000)
+       throw new Error(
+-        "PDFs with active content, scripts or embedded files are not accepted.",
++        "PDF structure is unusually complex. Export an optimized copy and try again.",
+       );
+-    if (object instanceof PDFDict)
++    if (typeof object === "object") visited.add(object);
++
++    if (object instanceof PDFDict) {
+       for (const [key, value] of object.entries()) {
+-        inspect(key, depth + 1);
++        const keyName = key instanceof PDFName ? key.decodeText() : "";
++        if (blockedKeys.has(keyName)) {
++          throw new Error(
++            "PDFs with scripts, executable actions or embedded files are not accepted.",
++          );
++        }
++        if (
++          keyName === "S" &&
++          value instanceof PDFName &&
++          blockedActionNames.has(value.decodeText())
++        ) {
++          throw new Error(
++            "PDFs with scripts, executable actions or embedded files are not accepted.",
++          );
++        }
++        if (
++          keyName === "Subtype" &&
++          value instanceof PDFName &&
++          value.decodeText() === "EmbeddedFile"
++        ) {
++          throw new Error("PDFs with embedded files are not accepted.");
++        }
+         inspect(value, depth + 1);
+       }
+-    if (object instanceof PDFArray)
++      return;
++    }
++
++    if (object instanceof PDFArray) {
+       for (const value of object.asArray()) inspect(value, depth + 1);
++      return;
++    }
++
+     if (object instanceof PDFRawStream) inspect(object.dict, depth + 1);
+   }
+-  for (const [, object] of document.context.enumerateIndirectObjects())
++
++  for (const [, object] of document.context.enumerateIndirectObjects()) {
+     inspect(object);
+-  parentPort.postMessage({ ok: true });
++  }
++
++  parentPort.postMessage({ ok: true, pageCount });
+ } catch (error) {
++  const message = String(error?.message || "");
+   parentPort.postMessage({
+     ok: false,
+-    error: error.message.includes("PDF")
+-      ? error.message
+-      : "Invalid PDF. Export an unencrypted, standard PDF and try again.",
++    error:
++      message &&
++      /PDF|encrypted|page|script|embedded|complex|action/i.test(message)
++        ? message
++        : "Invalid PDF. Export an unencrypted, standard PDF and try again.",
+   });
+ }
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/server/uploads.js ./server/uploads.js
+--- /mnt/data/TCT_ORIGINAL/original/server/uploads.js	2026-09-14 11:07:16.000000000 +0000
++++ ./server/uploads.js	2026-09-14 14:57:12.186253609 +0000
+@@ -1,36 +1,83 @@
+ import { Worker } from "node:worker_threads";
++
++const PDF_MAX_BYTES = 25 * 1024 * 1024;
++
++function pdfHeaderOffset(buffer) {
++  const probe = buffer.subarray(0, Math.min(buffer.length, 1024)).toString("latin1");
++  return probe.indexOf("%PDF-");
++}
++
++export function assertPdfEnvelope(buffer, originalName = "pattern.pdf") {
++  if (!Buffer.isBuffer(buffer) || !buffer.length) {
++    const error = new Error("The selected PDF is empty. Choose a valid pattern PDF.");
++    error.status = 400;
++    throw error;
++  }
++  if (buffer.length > PDF_MAX_BYTES) {
++    const error = new Error("Use a PDF under 25 MB.");
++    error.status = 400;
++    throw error;
++  }
++
++  // The PDF spec expects the header near the beginning. Some legitimate exporters
++  // prepend a BOM/newline, so accept it within the first 1 KiB instead of only byte 0.
++  const headerOffset = pdfHeaderOffset(buffer);
++  const tail = buffer
++    .subarray(Math.max(0, buffer.length - 1024 * 1024))
++    .toString("latin1");
++  if (headerOffset < 0 || !tail.includes("%%EOF")) {
++    const error = new Error(
++      `“${String(originalName).slice(0, 120)}” is not a readable PDF. Re-export it as a standard PDF and try again.`,
++    );
++    error.status = 400;
++    throw error;
++  }
++}
++
+ export function validatePdf(buffer) {
+   return new Promise((resolve, reject) => {
+     const worker = new Worker(new URL("./pdf-worker.js", import.meta.url), {
+       workerData: buffer,
+-      resourceLimits: { maxOldGenerationSizeMb: 192, stackSizeMb: 4 },
++      resourceLimits: { maxOldGenerationSizeMb: 384, stackSizeMb: 8 },
+     });
+     let settled = false;
+-    const finish = (error) => {
++    const finish = (error, result) => {
+       if (settled) return;
+       settled = true;
+       clearTimeout(timer);
+       void worker.terminate();
+       if (error) {
+-        error.status = 400;
++        error.status = error.status || 400;
+         reject(error);
+-      } else resolve();
++      } else resolve(result || { ok: true });
+     };
+     const timer = setTimeout(
+       () =>
+-        finish(new Error("PDF validation timed out. Export a simpler PDF.")),
+-      20000,
++        finish(
++          Object.assign(
++            new Error(
++              "PDF validation took too long. Re-export the file with optimized/default PDF settings and try again.",
++            ),
++            { status: 400 },
++          ),
++        ),
++      30000,
+     );
+     worker.once("message", (result) =>
+-      finish(result.ok ? null : new Error(result.error)),
++      finish(result.ok ? null : new Error(result.error), result),
+     );
+     worker.once("error", () =>
+       finish(
+-        new Error("PDF validation failed. Export a simpler, unencrypted PDF."),
++        new Error(
++          "The PDF validator could not read this file. Re-export it as an unencrypted PDF and try again.",
++        ),
+       ),
+     );
+     worker.once("exit", (code) => {
+-      if (code !== 0) finish(new Error("PDF could not be safely validated."));
++      if (code !== 0 && !settled)
++        finish(new Error("PDF validation stopped unexpectedly. Please try the upload again."));
+     });
+   });
+ }
++
++export { PDF_MAX_BYTES };
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/tests/customer-ui.js ./tests/customer-ui.js
+--- /mnt/data/TCT_ORIGINAL/original/tests/customer-ui.js	2026-09-14 11:02:35.000000000 +0000
++++ ./tests/customer-ui.js	2026-09-14 15:04:07.193495744 +0000
+@@ -20,8 +20,8 @@
+ assert.equal((await ctx.request.get(origin+"/api/account")).status(),401);
+ const token=f.emails.find(m=>m.to===email).text.match(/#token=([a-f0-9]{64})/)[1];
+ await page.goto(origin+"/verify.html#token="+token);
+-await page.getByRole("button",{name:"Verify email",exact:true}).click();
+-await page.getByRole("heading",{name:"You’re verified."}).waitFor();
++await page.getByRole("button",{name:"Verify email address",exact:true}).click();
++await page.getByRole("heading",{name:"Email verified."}).waitFor();
+ for(const width of [1440,390]){await page.setViewportSize({width,height:950});await page.screenshot({path:"test-results/verification-"+width+".png",fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));}
+ await page.getByRole("link",{name:"Continue to sign in"}).click();
+ await page.getByLabel("Email address",{exact:true}).fill(email);
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/tests/pdf-upload-regression.test.js ./tests/pdf-upload-regression.test.js
+--- /mnt/data/TCT_ORIGINAL/original/tests/pdf-upload-regression.test.js	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/pdf-upload-regression.test.js	2026-09-14 15:03:59.324266874 +0000
+@@ -0,0 +1,16 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { readFileSync } from "node:fs";
++import { assertPdfEnvelope, PDF_MAX_BYTES } from "../server/uploads.js";
++
++test("pattern PDF envelope accepts existing store PDFs and rejects invalid files", () => {
++  const existing = readFileSync(
++    new URL("../private/patterns/0347d9b9-da92-4a45-94d5-aeaea1243e27.pdf", import.meta.url),
++  );
++  assert.doesNotThrow(() => assertPdfEnvelope(existing, "pattern.pdf"));
++  assert.throws(() => assertPdfEnvelope(Buffer.from("not a pdf"), "fake.pdf"), /not a readable PDF/i);
++  assert.throws(
++    () => assertPdfEnvelope(Buffer.alloc(PDF_MAX_BYTES + 1), "huge.pdf"),
++    /under 25 MB/i,
++  );
++});
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/tests/verification-ui-static.test.js ./tests/verification-ui-static.test.js
+--- /mnt/data/TCT_ORIGINAL/original/tests/verification-ui-static.test.js	1970-01-01 00:00:00.000000000 +0000
++++ ./tests/verification-ui-static.test.js	2026-09-14 15:03:59.325032312 +0000
+@@ -0,0 +1,25 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { readFileSync } from "node:fs";
++
++const html = readFileSync(new URL("../verify.html", import.meta.url), "utf8");
++const js = readFileSync(new URL("../assets/verify.js", import.meta.url), "utf8");
++
++test("verification page includes the complete accessible verification flow", () => {
++  for (const id of [
++    "verificationHeading",
++    "verificationNotice",
++    "verifyEmailForm",
++    "verifyEmailButton",
++    "resendVerificationForm",
++    "resendVerificationButton",
++    "verificationEmail",
++    "verifiedSignIn",
++  ]) {
++    assert.match(html, new RegExp(`id=["']${id}["']`));
++    assert.match(js, new RegExp(id));
++  }
++  assert.match(html, /One-time secure link/);
++  assert.match(html, /Expires after 24 hours/);
++  assert.match(js, /Resend available in/);
++});
+diff -ruN '--exclude=PDF_EMAIL_FIX_CODE_CHANGES.patch' '--exclude=FILES_CHANGED_PDF_EMAIL.txt' /mnt/data/TCT_ORIGINAL/original/verify.html ./verify.html
+--- /mnt/data/TCT_ORIGINAL/original/verify.html	2026-09-14 11:47:30.000000000 +0000
++++ ./verify.html	2026-09-14 14:59:10.232246155 +0000
+@@ -1,14 +1,130 @@
+ <!doctype html>
+ <html lang="en">
+-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Verify your email — THE CROCHET THEORY</title><link rel="stylesheet" href="assets/styles.css"><link rel="stylesheet" href="assets/store.css"></head>
+-<body class="customer-auth-page">
+-  <header class="site-header"><div class="container nav"><a class="brand" href="index.html">THE CROCHET THEORY</a><a class="text-link" href="login.html">Back to sign in</a></div></header>
+-  <main class="auth-shell">
+-<div class="container account-return"><a class="btn btn-light" href="account.html"><i class="ri-arrow-left-line" aria-hidden="true"></i> Back to dashboard</a></div><section class="form-card auth-card verification-card"><div class="eyebrow">One last step</div><h1 id="verificationHeading">Check your inbox.</h1><p id="verificationIntro" class="muted">Verify your email address to finish setting up your account. Check your inbox and spam folder for a message from THE CROCHET THEORY.</p>
+-    <form id="verifyEmailForm" hidden><button class="btn btn-dark" type="submit">Verify email</button></form>
+-    <div id="verificationNotice" class="notice" role="status"></div>
+-    <a id="verifiedSignIn" class="btn btn-dark" href="login.html" hidden>Continue to sign in</a>
+-    <form id="resendVerificationForm"><h3>Need a new link?</h3><p class="helper">Verification links expire after 24 hours.</p><div class="field"><label for="verificationEmail">Email address</label><input class="input" id="verificationEmail" type="email" name="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required></div><button class="btn btn-light" type="submit">Resend verification</button></form>
+-    <p class="helper">Already verified? <a class="text-link" href="login.html">Sign in</a> · <a class="text-link" href="contact.html">Contact support</a></p>
+-  </section></main><footer class="auth-page-footer"><span>THE CROCHET THEORY</span><a href="policy.html">Privacy & policies</a></footer><script src="assets/verify.js"></script>
+-</body></html>
++  <head>
++    <meta charset="utf-8" />
++    <meta name="viewport" content="width=device-width,initial-scale=1" />
++    <meta name="referrer" content="no-referrer" />
++    <meta name="robots" content="noindex,nofollow" />
++    <meta name="description" content="Securely verify your THE CROCHET THEORY account email." />
++    <title>Verify your email — THE CROCHET THEORY</title>
++    <link rel="stylesheet" href="/assets/vendor/remixicon/remixicon.css" />
++    <link rel="stylesheet" href="assets/styles.css" />
++    <link rel="stylesheet" href="assets/store.css" />
++  </head>
++  <body class="customer-auth-page verification-page">
++    <header class="site-header verification-header">
++      <div class="container nav">
++        <a class="brand" href="index.html">THE CROCHET THEORY</a>
++        <a class="verification-back" href="login.html">
++          <i class="ri-arrow-left-line" aria-hidden="true"></i>
++          Back to sign in
++        </a>
++      </div>
++    </header>
++
++    <main class="auth-shell verification-shell">
++      <section class="verification-layout" aria-labelledby="verificationHeading">
++        <aside class="verification-story" aria-hidden="true">
++          <div class="verification-story-mark"><i class="ri-mail-check-line"></i></div>
++          <div>
++            <span class="verification-kicker">Secure account setup</span>
++            <h2>Your pattern library starts with one verified email.</h2>
++            <p>Verification protects your purchases, downloads and account recovery.</p>
++          </div>
++          <div class="verification-security-list">
++            <span><i class="ri-shield-check-line"></i> One-time secure link</span>
++            <span><i class="ri-time-line"></i> Expires after 24 hours</span>
++            <span><i class="ri-lock-2-line"></i> No password is sent by email</span>
++          </div>
++        </aside>
++
++        <div class="form-card auth-card verification-card">
++          <div class="verification-steps" aria-label="Account setup progress">
++            <div class="verification-step is-complete">
++              <span><i class="ri-check-line"></i></span><small>Account</small>
++            </div>
++            <div class="verification-step is-active" id="verificationStepCurrent">
++              <span>2</span><small>Verify</small>
++            </div>
++            <div class="verification-step" id="verificationStepReady">
++              <span>3</span><small>Ready</small>
++            </div>
++          </div>
++
++          <div id="verificationStateIcon" class="verification-state-icon" aria-hidden="true">
++            <i class="ri-mail-send-line"></i>
++          </div>
++          <div class="eyebrow">One last step</div>
++          <h1 id="verificationHeading">Check your inbox.</h1>
++          <p id="verificationIntro" class="auth-intro muted">
++            We sent a secure verification link to your email address. Open the message from THE CROCHET THEORY to continue.
++          </p>
++
++          <div id="verificationEmailChip" class="verification-email-chip" hidden>
++            <i class="ri-mail-line" aria-hidden="true"></i>
++            <span id="verificationEmailDisplay"></span>
++          </div>
++
++          <div id="verificationNotice" class="notice" role="status" aria-live="polite"></div>
++
++          <form id="verifyEmailForm" class="verification-primary-action" hidden>
++            <button id="verifyEmailButton" class="btn btn-dark auth-submit" type="submit">
++              <span>Verify email address</span>
++              <i class="ri-shield-check-line" aria-hidden="true"></i>
++            </button>
++            <p class="verification-fineprint">This link can be used once and expires after 24 hours.</p>
++          </form>
++
++          <a id="verifiedSignIn" class="btn btn-dark auth-submit" href="login.html" hidden>
++            Continue to sign in <i class="ri-arrow-right-line" aria-hidden="true"></i>
++          </a>
++
++          <div id="verificationWaiting" class="verification-waiting">
++            <div class="verification-tip">
++              <i class="ri-information-line" aria-hidden="true"></i>
++              <div><strong>Can’t find the email?</strong><span>Check Spam, Promotions or Junk, then use resend below.</span></div>
++            </div>
++          </div>
++
++          <form id="resendVerificationForm" class="verification-resend">
++            <div class="verification-resend-head">
++              <div>
++                <h3>Need a new link?</h3>
++                <p class="helper">Enter the same email you used when creating your account.</p>
++              </div>
++              <i class="ri-refresh-line" aria-hidden="true"></i>
++            </div>
++            <div class="field">
++              <label for="verificationEmail">Email address</label>
++              <input
++                class="input"
++                id="verificationEmail"
++                type="email"
++                name="email"
++                autocomplete="email"
++                maxlength="254"
++                placeholder="you@example.com"
++                required
++              />
++            </div>
++            <button id="resendVerificationButton" class="btn btn-light verification-resend-button" type="submit">
++              <i class="ri-send-plane-line" aria-hidden="true"></i>
++              <span>Resend verification email</span>
++            </button>
++          </form>
++
++          <div class="verification-footer-links">
++            <a href="signup.html"><i class="ri-user-add-line"></i> Use another email</a>
++            <a href="contact.html"><i class="ri-customer-service-2-line"></i> Contact support</a>
++          </div>
++        </div>
++      </section>
++    </main>
++
++    <footer class="auth-page-footer">
++      <span>&copy; 2026 THE CROCHET THEORY</span>
++      <a href="policy.html">Privacy & policies</a>
++    </footer>
++    <script src="assets/verify.js"></script>
++  </body>
++</html>

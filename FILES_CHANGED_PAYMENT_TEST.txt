@@ -1,0 +1,29 @@
+THE CROCHET THEORY — Latest payment test update files
+
+Core runtime changes:
+- .env
+- .env.example
+- assets/app.js
+- assets/store.css
+- server/app.js
+- server/test-card.js (new)
+
+Tests:
+- tests/test-card.test.js (new)
+- tests/store.test.js
+
+Documentation:
+- PAYMENT_SETUP.md
+- PAYMENT_TEST_MODE.md (new)
+- CHANGES_AND_SETUP.md
+- README.md
+- PAYMENT_TEST_CODE_CHANGES.patch
+
+What the update does:
+- Full International Card Payment form in development test mode.
+- Cardholder Name, Card Number, Expiry, CVV, phone + country code, 249-country list, State/Province, City, ZIP.
+- Client-side card format/Luhn/expiry/CVV validation.
+- Test checkout is marked successful and unlocks only purchased digital files.
+- Raw card number, expiry and CVV are discarded in-browser and never sent to the server.
+- Test shortcut is disabled automatically in NODE_ENV=production.
+- Real mode remains Payoneer/provider-controlled.

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="description" content="Securely verify your THE CROCHET THEORY account email." />
+    <title>Verify your email — THE CROCHET THEORY</title>
+    <link rel="stylesheet" href="/assets/vendor/remixicon/remixicon.css" />
+    <link rel="stylesheet" href="assets/styles.css" />
+    <link rel="stylesheet" href="assets/store.css" />
+  </head>
+  <body class="customer-auth-page verification-page">
+    <header class="site-header verification-header">
+      <div class="container nav">
+        <a class="brand" href="index.html">THE CROCHET THEORY</a>
+        <a class="verification-back" href="login.html">
+          <i class="ri-arrow-left-line" aria-hidden="true"></i>
+          Back to sign in
+        </a>
+      </div>
+    </header>
+
+    <main class="auth-shell verification-shell">
+      <section class="verification-layout" aria-labelledby="verificationHeading">
+        <aside class="verification-story" aria-hidden="true">
+          <div class="verification-story-mark"><i class="ri-mail-check-line"></i></div>
+          <div>
+            <span class="verification-kicker">Secure account setup</span>
+            <h2>Your pattern library starts with one verified email.</h2>
+            <p>Verification protects your purchases, downloads and account recovery.</p>
+          </div>
+          <div class="verification-security-list">
+            <span><i class="ri-shield-check-line"></i> One-time secure link</span>
+            <span><i class="ri-time-line"></i> Expires after 24 hours</span>
+            <span><i class="ri-lock-2-line"></i> No password is sent by email</span>
+          </div>
+        </aside>
+
+        <div class="form-card auth-card verification-card">
+          <div class="verification-steps" aria-label="Account setup progress">
+            <div class="verification-step is-complete">
+              <span><i class="ri-check-line"></i></span><small>Account</small>
+            </div>
+            <div class="verification-step is-active" id="verificationStepCurrent">
+              <span>2</span><small>Verify</small>
+            </div>
+            <div class="verification-step" id="verificationStepReady">
+              <span>3</span><small>Ready</small>
+            </div>
+          </div>
+
+          <div id="verificationStateIcon" class="verification-state-icon" aria-hidden="true">
+            <i class="ri-mail-send-line"></i>
+          </div>
+          <div class="eyebrow">One last step</div>
+          <h1 id="verificationHeading">Check your inbox.</h1>
+          <p id="verificationIntro" class="auth-intro muted">
+            We sent a secure verification link to your email address. Open the message from THE CROCHET THEORY to continue.
+          </p>
+
+          <div id="verificationEmailChip" class="verification-email-chip" hidden>
+            <i class="ri-mail-line" aria-hidden="true"></i>
+            <span id="verificationEmailDisplay"></span>
+          </div>
+
+          <div id="verificationNotice" class="notice" role="status" aria-live="polite"></div>
+
+          <form id="verifyEmailForm" class="verification-primary-action" hidden>
+            <button id="verifyEmailButton" class="btn btn-dark auth-submit" type="submit">
+              <span>Verify email address</span>
+              <i class="ri-shield-check-line" aria-hidden="true"></i>
+            </button>
+            <p class="verification-fineprint">This link can be used once and expires after 24 hours.</p>
+          </form>
+
+          <a id="verifiedSignIn" class="btn btn-dark auth-submit" href="login.html" hidden>
+            Continue to sign in <i class="ri-arrow-right-line" aria-hidden="true"></i>
+          </a>
+
+          <div id="verificationWaiting" class="verification-waiting">
+            <div class="verification-tip">
+              <i class="ri-information-line" aria-hidden="true"></i>
+              <div><strong>Can’t find the email?</strong><span>Check Spam, Promotions or Junk, then use resend below.</span></div>
+            </div>
+          </div>
+
+          <form id="resendVerificationForm" class="verification-resend">
+            <div class="verification-resend-head">
+              <div>
+                <h3>Need a new link?</h3>
+                <p class="helper">Enter the same email you used when creating your account.</p>
+              </div>
+              <i class="ri-refresh-line" aria-hidden="true"></i>
+            </div>
+            <div class="field">
+              <label for="verificationEmail">Email address</label>
+              <input
+                class="input"
+                id="verificationEmail"
+                type="email"
+                name="email"
+                autocomplete="email"
+                maxlength="254"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+            <button id="resendVerificationButton" class="btn btn-light verification-resend-button" type="submit">
+              <i class="ri-send-plane-line" aria-hidden="true"></i>
+              <span>Resend verification email</span>
+            </button>
+          </form>
+
+          <div class="verification-footer-links">
+            <a href="signup.html"><i class="ri-user-add-line"></i> Use another email</a>
+            <a href="contact.html"><i class="ri-customer-service-2-line"></i> Contact support</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="auth-page-footer">
+      <span>&copy; 2026 THE CROCHET THEORY</span>
+      <a href="policy.html">Privacy & policies</a>
+      <span class="auth-social" aria-label="Social media"><a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="ri-instagram-line" aria-hidden="true"></i></a><a href="https://www.tiktok.com/" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="ri-tiktok-line" aria-hidden="true"></i></a><a href="https://www.pinterest.com/" target="_blank" rel="noopener noreferrer" aria-label="Pinterest"><i class="ri-pinterest-line" aria-hidden="true"></i></a></span>
+    </footer>
+    <script src="assets/verify.js"></script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+FINAL THE CROCHET THEORY — verification summary
+
+Requested checkout changes:
+- Port: 3000
+- Coupon UI removed from basket summary
+- Compact Checkout button
+- Checkout switches to focused card-payment view
+- Development checkout accepts any 14–19 digit numeric card value (no Luhn requirement)
+- Button/status wording uses "Complete payment", not "test payment"
+- 14-digit sample validation + expiry 10/30 + CVV 009: accepted by development validation
+- Basket icon replaced with a clearer shopping-basket icon
+
+Checks run before packaging:
+- assets/app.js syntax: PASS
+- assets/dashboard.js syntax: PASS
+- server/test-card.js syntax: PASS
+- final checkout regression tests: PASS
+- PDF upload regression test: PASS
+- email verification static regression test: PASS
+- HTML parse check: PASS
+
+A full dependency-backed suite was attempted, but npm installation could not finish in this Linux sandbox because the project requires Node 24.16.x while this sandbox has Node 22.16.0 and the install timed out. The final ZIP intentionally excludes node_modules. On the target Windows machine (Node 24.16.0), run npm ci (or npm run repair) before npm run dev.
